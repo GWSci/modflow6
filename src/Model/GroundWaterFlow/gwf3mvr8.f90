@@ -100,7 +100,8 @@ module GwfMvrModule
   use KindModule,             only: DP, I4B
   use ConstantsModule,        only: LENORIGIN, LENPACKAGENAME, LENMODELNAME,   &
                                     LENBUDTXT, LENAUXNAME, LENPAKLOC,          &
-                                    DZERO, DNODATA, MAXCHARLEN
+                                    DZERO, DNODATA, MAXCHARLEN, TABCENTER,     &
+                                    LINELENGTH
   use MvrModule,              only: MvrType
   use BudgetModule,           only: BudgetType, budget_cr
   use BudgetObjectModule,     only: BudgetObjectType, budgetobject_cr
@@ -109,6 +110,7 @@ module GwfMvrModule
   use PackageMoverModule,     only: PackageMoverType
   use BaseDisModule,          only: DisBaseType
   use InputOutputModule,      only: urword
+  use TableModule,            only: TableType, table_cr
 
   implicit none
   private
@@ -135,6 +137,9 @@ module GwfMvrModule
     type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container (used to write binary file)
     type(PackageMoverType),                                                    &
       dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
+    !
+    ! -- table objects
+    type(TableType), pointer :: outputtab => null()
   contains
     procedure :: mvr_ar
     procedure :: mvr_rp
@@ -154,11 +159,13 @@ module GwfMvrModule
     procedure :: allocate_arrays
     procedure, private :: mvr_setup_budobj
     procedure, private :: mvr_fill_budobj
+    procedure, private :: mvr_setup_outputtab
+    procedure, private :: mvr_print_outputtab
   end type GwfMvrType
 
   contains
 
-  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, iexgmvr, dis)
+  subroutine mvr_cr(mvrobj, name_parent, inunit, iout, dis, iexgmvr)
 ! ******************************************************************************
 ! mvr_cr -- Create a new mvr object
 ! ******************************************************************************
@@ -170,8 +177,8 @@ module GwfMvrModule
     character(len=*), intent(in) :: name_parent
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
+    class(DisBaseType), pointer, intent(in) :: dis
     integer(I4B), optional :: iexgmvr
-    class(DisBaseType), pointer, intent(in), optional :: dis
 ! ------------------------------------------------------------------------------
     !
     ! -- Create the object
@@ -185,7 +192,7 @@ module GwfMvrModule
     call mvrobj%allocate_scalars()
     !
     ! -- Set pointer to dis
-    if (present(dis)) mvrobj%dis => dis
+    mvrobj%dis => dis
     !
     ! -- Set variables
     mvrobj%inunit = inunit
@@ -502,19 +509,16 @@ module GwfMvrModule
     integer(I4B), intent(in) :: ibudfl
     integer(I4B), intent(in) :: isuppress_output
     ! -- locals
-    integer(I4B) :: i
     integer(I4B) :: ibinun
     ! -- formats
     character(len=*), parameter :: fmttkk = &
       "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
-    if(ibudfl /= 0 .and. this%iprflow == 1 .and. isuppress_output == 0) then
-      write(this%iout, fmttkk) '     MVR SUMMARY', kper, kstp
-      do i = 1, this%nmvr
-        call this%mvr(i)%writeflow(this%iout)
-      enddo
-    endif
+    ! -- Write the flow table
+    if (ibudfl /= 0 .and. this%iprflow /= 0 .and. isuppress_output == 0) then
+      call this%mvr_print_outputtab()
+    end if
     !
     ! -- fill the budget object
     call this%mvr_fill_budobj()
@@ -630,6 +634,13 @@ module GwfMvrModule
       call this%budobj%budgetobject_da()
       deallocate(this%budobj)
       nullify(this%budobj)
+      !
+      ! -- output table object
+      if (associated(this%outputtab)) then
+        call this%outputtab%table_da()
+        deallocate(this%outputtab)
+        nullify(this%outputtab)
+      end if
     endif
     !
     ! -- Scalars
@@ -1073,6 +1084,9 @@ module GwfMvrModule
     ! -- allocate the object and assign values to object variables
     call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%origin)
     !
+    ! -- setup the output table
+    call this%mvr_setup_outputtab()
+    !
     ! -- Return
     return
   end subroutine allocate_arrays
@@ -1242,5 +1256,89 @@ module GwfMvrModule
     ! -- return
     return
   end subroutine mvr_fill_budobj
+
+  subroutine mvr_setup_outputtab(this)
+! ******************************************************************************
+! mvr_setup_outputtab -- set up output table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    character(len=LINELENGTH) :: title
+    character(len=LINELENGTH) :: text
+    integer(I4B) :: ntabcol
+    integer(I4B) :: ilen
+! ------------------------------------------------------------------------------
+    !
+    ! -- allocate and initialize the output table
+    if (this%iprflow /= 0) then
+      !
+      ! -- dimension table
+      ntabcol = 7
+      !
+      ! -- initialize the output table object
+      title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+              ') FLOW RATES'
+      call table_cr(this%outputtab, this%name, title)
+      call this%outputtab%table_df(this%maxmvr, ntabcol, this%iout,            &
+                                    transient=.TRUE.)
+      text = 'NUMBER'
+      call this%outputtab%initialize_column(text, 10, alignment=TABCENTER)
+      text = 'PROVIDER LOCATION'
+      ilen = LENMODELNAME+LENPACKAGENAME+1
+      call this%outputtab%initialize_column(text, ilen)
+      text = 'PROVIDER ID'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'AVAILABLE RATE'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'PROVIDED RATE'
+      call this%outputtab%initialize_column(text, 10)
+      text = 'RECEIVER LOCATION'
+      ilen = LENMODELNAME+LENPACKAGENAME+1
+      call this%outputtab%initialize_column(text, ilen)
+      text = 'RECEIVER ID'
+      call this%outputtab%initialize_column(text, 10)
+      
+    end if
+    !
+    ! -- return
+    return
+  end subroutine mvr_setup_outputtab
+
+  subroutine mvr_print_outputtab(this)
+! ******************************************************************************
+! mvr_setup_outputtab -- set up output table
+! ******************************************************************************
+!
+!    SPECIFICATIONS:
+! ------------------------------------------------------------------------------
+    ! -- dummy
+    class(GwfMvrType),intent(inout) :: this
+    ! -- local
+    character (len=LINELENGTH) :: title
+    integer(I4B) :: i
+! ------------------------------------------------------------------------------
+    !
+    ! -- Add terms and print the table
+    title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+            ') FLOW RATES'
+    call this%outputtab%set_title(title)
+    call this%outputtab%set_maxbound(this%nmvr)
+    do i = 1, this%nmvr
+      call this%outputtab%add_term(i)
+      call this%outputtab%add_term(this%mvr(i)%pname1)
+      call this%outputtab%add_term(this%mvr(i)%irch1)
+      call this%outputtab%add_term(this%mvr(i)%qanew)
+      call this%outputtab%add_term(this%mvr(i)%qpactual)
+      call this%outputtab%add_term(this%mvr(i)%pname2)
+      call this%outputtab%add_term(this%mvr(i)%irch2)
+    end do
+    !
+    ! -- return
+    return
+  end subroutine mvr_print_outputtab
 
 end module

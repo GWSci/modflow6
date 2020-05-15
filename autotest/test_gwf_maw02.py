@@ -77,11 +77,11 @@ def get_model(idx, dir):
 
     # create iterative model solution and register the gwf model with it
     ims = flopy.mf6.ModflowIms(sim, print_option='SUMMARY',
-                               outer_hclose=hclose,
+                               outer_dvclose=hclose,
                                outer_maximum=nouter,
                                under_relaxation='NONE',
                                inner_maximum=ninner,
-                               inner_hclose=hclose, rcloserecord=rclose,
+                               inner_dvclose=hclose, rcloserecord=rclose,
                                linear_acceleration=krylov[idx],
                                scaling_method='NONE',
                                reordering_method='NONE',
@@ -149,7 +149,8 @@ def get_model(idx, dir):
                                   observations=mawo_dict,
                                   packagedata=wellrecarray,
                                   connectiondata=wellconnectionsrecarray,
-                                  perioddata=wellperiodrecarray)
+                                  perioddata=wellperiodrecarray,
+                                  pname='MAW-1')
 
     # output control
     oc = flopy.mf6.ModflowGwfoc(gwf,
@@ -180,7 +181,7 @@ def eval_maw(sim):
     # get results from listing file
     fpth = os.path.join(sim.simpath,
                         '{}.lst'.format(os.path.basename(sim.name)))
-    budl = flopy.utils.Mf6ListBudget(fpth, budgetkey='MAW BUDGET FOR ENTIRE MODEL AT END OF TIME STEP')
+    budl = flopy.utils.Mf6ListBudget(fpth, budgetkey='MAW-1 BUDGET FOR ENTIRE MODEL AT END OF TIME STEP')
     names = list(bud_lst)
     d0 = budl.get_budget(names=names)[0]
     dtype = d0.dtype
