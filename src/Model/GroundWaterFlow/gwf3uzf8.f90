@@ -401,7 +401,7 @@ contains
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
-    use ConstantsModule, only: DZERO
+    use ConstantsModule, only: DZERO, MNORMAL
     use OpenSpecModule, only: access, form
     use SimModule, only: ustop, store_error
     use InputOutputModule, only: urword, getunit, openfile
@@ -450,7 +450,7 @@ contains
       !    call this%parser%GetString(fname)
       !    this%iwcontout = getunit()
       !    call openfile(this%iwcontout, this%iout, fname, 'DATA(BINARY)',  &
-      !                 form, access, 'REPLACE')
+      !                 form, access, 'REPLACE', mode_opt=MNORMAL)
       !    write(this%iout,fmtuzfbin) 'WATERCONTENT', fname, this%iwcontout
       !    found = .true.
       !  else
@@ -461,8 +461,8 @@ contains
         if (keyword == 'FILEOUT') then
           call this%parser%GetString(fname)
           this%ibudgetout = getunit()
-          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',  &
-                        form, access, 'REPLACE')
+          call openfile(this%ibudgetout, this%iout, fname, 'DATA(BINARY)',       &
+                        form, access, 'REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtuzfbin) 'BUDGET', fname, this%ibudgetout
           found = .true.
         else
@@ -474,7 +474,7 @@ contains
           call this%parser%GetString(fname)
           this%ipakcsv = getunit()
           call openfile(this%ipakcsv, this%iout, fname, 'CSV',                   &
-                        filstat_opt='REPLACE')
+                        filstat_opt='REPLACE', mode_opt=MNORMAL)
           write(this%iout,fmtuzfbin) 'PACKAGE_CONVERGENCE', fname, this%ipakcsv
           found = .true.
         else
@@ -1424,9 +1424,10 @@ contains
     qseeptomvr = DZERO
     qgwet = DZERO
     !
-    ! -- set maxrows
+    ! -- set kstp, kper, and maxrows
     maxrows = 0
     if (this%iprflow /= 0) then
+      call this%outputtab%set_kstpkper(kstp, kper)
       do i = 1, this%nodes
         node = this%nodelist(i)
         if (this%ibound(node) > 0) then
@@ -1435,7 +1436,6 @@ contains
       end do
       call this%outputtab%set_maxbound(maxrows)
     end if
-    
     !
     ! -- Go through and process each UZF cell
     do i = 1, this%nodes
@@ -1933,7 +1933,7 @@ contains
     !
     ! -- Output uzf flow table
     if (ibudfl /= 0 .and. this%iprflow /= 0) then
-      call this%budobj%write_flowtable(this%dis)
+      call this%budobj%write_flowtable(this%dis, kstp, kper)
     end if
     !
     ! -- Output uzf budget
