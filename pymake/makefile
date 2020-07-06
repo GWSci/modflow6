@@ -1,27 +1,26 @@
-# makefile created on 2020-04-07 15:16:02.968245
-# by pymake (version 1.1.0)
-# using the gfortran fortran and gcc c/c++ compilers.
+# makefile created on 2020-06-23 13:07:30.030148
+# by pymake (version 1.1.0) for the 'mf6' executable 
+# using the 'ifort' fortran compiler(s).
 
-# Define the directories for the object and module files,
-# the executable, and the executable name and path.
-OBJDIR = ./obj_temp
-BINDIR = ../bin
-PROGRAM = ../bin/mf6
 
-SOURCEDIR1=../src
-SOURCEDIR2=../src/Utilities
-SOURCEDIR3=../src/Utilities/OutputControl
-SOURCEDIR4=../src/Utilities/TimeSeries
-SOURCEDIR5=../src/Utilities/Memory
-SOURCEDIR6=../src/Utilities/Observation
-SOURCEDIR7=../src/Timing
-SOURCEDIR8=../src/Solution
-SOURCEDIR9=../src/Solution/SparseMatrixSolver
-SOURCEDIR10=../src/Model
-SOURCEDIR11=../src/Model/GroundWaterFlow
-SOURCEDIR12=../src/Model/Geometry
+include ./makedefaults
+
+# Define the source file directories
+SOURCEDIR1=../src/
+SOURCEDIR2=../src/Exchange
+SOURCEDIR3=../src/Solution
+SOURCEDIR4=../src/Solution/SparseMatrixSolver
+SOURCEDIR5=../src/Timing
+SOURCEDIR6=../src/Utilities
+SOURCEDIR7=../src/Utilities/TimeSeries
+SOURCEDIR8=../src/Utilities/Memory
+SOURCEDIR9=../src/Utilities/OutputControl
+SOURCEDIR10=../src/Utilities/Observation
+SOURCEDIR11=../src/Model
+SOURCEDIR12=../src/Model/GroundWaterTransport
 SOURCEDIR13=../src/Model/ModelUtilities
-SOURCEDIR14=../src/Exchange
+SOURCEDIR14=../src/Model/GroundWaterFlow
+SOURCEDIR15=../src/Model/Geometry
 
 VPATH = \
 ${SOURCEDIR1} \
@@ -37,191 +36,148 @@ ${SOURCEDIR10} \
 ${SOURCEDIR11} \
 ${SOURCEDIR12} \
 ${SOURCEDIR13} \
-${SOURCEDIR14} 
+${SOURCEDIR14} \
+${SOURCEDIR15} 
 
-.SUFFIXES: .c .cpp .f .f90 .F90 .fpp .o
-
-# Define the Fortran compile flags
-FC = gfortran
-FFLAGS = -O2 -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid -fbacktrace -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -fprofile-abs-path -fopenmp -fprofile-dir=(PROFDIR) -ftree-vectorize -MMD -cpp 
-
-# Define the C compile flags
-CC = gcc
-CFLAGS = -O2 -D_UF -MMD -cpp 
-
-# Define the libraries
-SYSLIBS = -lc 
+.SUFFIXES: .f90 .fpp .o
 
 OBJECTS = \
-$(OBJDIR)/OpenSpec.o \
-$(OBJDIR)/DeferredStringObject.o \
 $(OBJDIR)/kind.o \
-$(OBJDIR)/Xt3dAlgorithm.o \
-$(OBJDIR)/Constants.o \
-$(OBJDIR)/Sparse.o \
-$(OBJDIR)/compilerversion.o \
-$(OBJDIR)/version.o \
-$(OBJDIR)/Averaging.o \
-$(OBJDIR)/Memory.o \
-$(OBJDIR)/HashTable.o \
 $(OBJDIR)/ims8reordering.o \
-$(OBJDIR)/BaseGeometry.o \
+$(OBJDIR)/Constants.o \
+$(OBJDIR)/HashTable.o \
+$(OBJDIR)/PackageBudget.o \
 $(OBJDIR)/SmoothingFunctions.o \
+$(OBJDIR)/BaseGeometry.o \
+$(OBJDIR)/defmacro.o \
 $(OBJDIR)/SimVariables.o \
+$(OBJDIR)/OpenSpec.o \
+$(OBJDIR)/version.o \
+$(OBJDIR)/compilerversion.o \
+$(OBJDIR)/Sparse.o \
+$(OBJDIR)/Xt3dAlgorithm.o \
 $(OBJDIR)/genericutils.o \
 $(OBJDIR)/Timer.o \
-$(OBJDIR)/List.o \
 $(OBJDIR)/ArrayHandlers.o \
-$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/List.o \
 $(OBJDIR)/StringList.o \
 $(OBJDIR)/TimeSeriesRecord.o \
-$(OBJDIR)/mf6lists.o \
-$(OBJDIR)/Sim.o \
+$(OBJDIR)/Message.o \
 $(OBJDIR)/ObsOutput.o \
-$(OBJDIR)/Iunit.o \
-$(OBJDIR)/InputOutput.o \
-$(OBJDIR)/CircularGeometry.o \
+$(OBJDIR)/Sim.o \
 $(OBJDIR)/Budget.o \
-$(OBJDIR)/sort.o \
-$(OBJDIR)/ArrayReaders.o \
-$(OBJDIR)/ObsOutputList.o \
-$(OBJDIR)/RectangularChGeometry.o \
+$(OBJDIR)/InputOutput.o \
+$(OBJDIR)/mf6lists.o \
 $(OBJDIR)/comarg.o \
-$(OBJDIR)/BudgetFileReader.o \
-$(OBJDIR)/MemoryManager.o \
-$(OBJDIR)/RectangularGeometry.o \
-$(OBJDIR)/DisvGeom.o \
+$(OBJDIR)/ObsOutputList.o \
 $(OBJDIR)/TableTerm.o \
-$(OBJDIR)/PrintSaveManager.o \
-$(OBJDIR)/BlockParser.o \
-$(OBJDIR)/ims8linear.o \
-$(OBJDIR)/PackageMover.o \
-$(OBJDIR)/NameFile.o \
-$(OBJDIR)/Connections.o \
-$(OBJDIR)/tdis.o \
-$(OBJDIR)/Mover.o \
-$(OBJDIR)/TimeSeries.o \
-$(OBJDIR)/TimeSeriesLink.o \
-$(OBJDIR)/UzfCellGroup.o \
-$(OBJDIR)/TimeSeriesFileList.o \
-$(OBJDIR)/BaseModel.o \
+$(OBJDIR)/RectangularGeometry.o \
+$(OBJDIR)/Iunit.o \
+$(OBJDIR)/sort.o \
+$(OBJDIR)/DisvGeom.o \
+$(OBJDIR)/CircularGeometry.o \
 $(OBJDIR)/Table.o \
-$(OBJDIR)/TimeSeriesManager.o \
-$(OBJDIR)/BaseSolution.o \
+$(OBJDIR)/PrintSaveManager.o \
+$(OBJDIR)/BudgetFileReader.o \
+$(OBJDIR)/BlockParser.o \
+$(OBJDIR)/HeadFileReader.o \
+$(OBJDIR)/ArrayReaders.o \
+$(OBJDIR)/TimeSeries.o \
+$(OBJDIR)/NameFile.o \
+$(OBJDIR)/Memory.o \
+$(OBJDIR)/TimeSeriesLink.o \
+$(OBJDIR)/TimeSeriesFileList.o \
 $(OBJDIR)/ListReader.o \
-$(OBJDIR)/DiscretizationBase.o \
-$(OBJDIR)/SolutionGroup.o \
-$(OBJDIR)/gwf3dis8.o \
-$(OBJDIR)/Xt3dInterface.o \
-$(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/MemoryList.o \
+$(OBJDIR)/MemoryManager.o \
+$(OBJDIR)/PackageMover.o \
+$(OBJDIR)/Mover.o \
+$(OBJDIR)/BaseModel.o \
+$(OBJDIR)/tdis.o \
+$(OBJDIR)/BaseSolution.o \
+$(OBJDIR)/ims8linear.o \
+$(OBJDIR)/UzfCellGroup.o \
+$(OBJDIR)/Connections.o \
+$(OBJDIR)/TimeSeriesManager.o \
 $(OBJDIR)/BaseExchange.o \
-$(OBJDIR)/BudgetTerm.o \
-$(OBJDIR)/OutputControlData.o \
-$(OBJDIR)/NumericalPackage.o \
-$(OBJDIR)/gwf3hfb8.o \
-$(OBJDIR)/TimeArray.o \
-$(OBJDIR)/gwf3disv8.o \
-$(OBJDIR)/VKDProcess.o \
+$(OBJDIR)/SolutionGroup.o \
+$(OBJDIR)/DiscretizationBase.o \
 $(OBJDIR)/Observe.o \
-$(OBJDIR)/gwf3sto8.o \
-$(OBJDIR)/BudgetObject.o \
-$(OBJDIR)/gwf3ic8.o \
-$(OBJDIR)/OutputControl.o \
-$(OBJDIR)/ObsUtility.o \
-$(OBJDIR)/gwf3npf8.o \
-$(OBJDIR)/gwf3oc8.o \
 $(OBJDIR)/ObsContainer.o \
+$(OBJDIR)/TimeArray.o \
+$(OBJDIR)/BudgetTerm.o \
+$(OBJDIR)/NumericalPackage.o \
+$(OBJDIR)/gwf3disv8.o \
+$(OBJDIR)/gwf3dis8.o \
+$(OBJDIR)/OutputControlData.o \
+$(OBJDIR)/BudgetObject.o \
+$(OBJDIR)/gwf3sto8.o \
+$(OBJDIR)/gwf3disu8.o \
+$(OBJDIR)/Xt3dInterface.o \
 $(OBJDIR)/gwf3mvr8.o \
+$(OBJDIR)/ObsUtility.o \
+$(OBJDIR)/OutputControl.o \
 $(OBJDIR)/TimeArraySeries.o \
+$(OBJDIR)/gwt1oc1.o \
+$(OBJDIR)/gwf3ic8.o \
+$(OBJDIR)/gwf3hfb8.o \
+$(OBJDIR)/gwt1ic1.o \
 $(OBJDIR)/Obs3.o \
-$(OBJDIR)/TimeArraySeriesLink.o \
+$(OBJDIR)/gwf3oc8.o \
+$(OBJDIR)/gwt1obs1.o \
 $(OBJDIR)/gwf3csub8.o \
-$(OBJDIR)/TimeArraySeriesManager.o \
+$(OBJDIR)/TimeArraySeriesLink.o \
+$(OBJDIR)/gwf3npf8.o \
 $(OBJDIR)/gwf3obs8.o \
+$(OBJDIR)/TimeArraySeriesManager.o \
 $(OBJDIR)/BoundaryPackage.o \
-$(OBJDIR)/gwf3lak8.o \
+$(OBJDIR)/gwf3evt8.o \
+$(OBJDIR)/gwf3maw8.o \
+$(OBJDIR)/gwf3uzf8.o \
+$(OBJDIR)/gwf3wel8.o \
+$(OBJDIR)/gwt1fmi1.o \
+$(OBJDIR)/gwf3ghb8.o \
+$(OBJDIR)/gwt1mvt1.o \
+$(OBJDIR)/gwt1apt1.o \
+$(OBJDIR)/gwt1adv1.o \
+$(OBJDIR)/gwt1dsp.o \
+$(OBJDIR)/NumericalModel.o \
 $(OBJDIR)/gwf3chd8.o \
 $(OBJDIR)/gwf3drn8.o \
-$(OBJDIR)/gwf3maw8.o \
-$(OBJDIR)/gwf3sfr8.o \
-$(OBJDIR)/gwf3uzf8.o \
-$(OBJDIR)/NumericalModel.o \
-$(OBJDIR)/gwf3wel8.o \
-$(OBJDIR)/gwf3evt8.o \
-$(OBJDIR)/gwf3rch8.o \
-$(OBJDIR)/gwf3ghb8.o \
-$(OBJDIR)/GhostNode.o \
 $(OBJDIR)/gwf3riv8.o \
+$(OBJDIR)/gwt1uzt1.o \
+$(OBJDIR)/gwf3sfr8.o \
+$(OBJDIR)/gwt1cnc1.o \
+$(OBJDIR)/gwf3rch8.o \
+$(OBJDIR)/gwt1src1.o \
+$(OBJDIR)/gwf3lak8.o \
+$(OBJDIR)/gwt1mst1.o \
+$(OBJDIR)/GhostNode.o \
+$(OBJDIR)/gwt1ssm1.o \
+$(OBJDIR)/gwt1sft1.o \
+$(OBJDIR)/gwt1mwt1.o \
 $(OBJDIR)/NumericalExchange.o \
-$(OBJDIR)/gwf3.o \
 $(OBJDIR)/NumericalSolution.o \
+$(OBJDIR)/gwf3buy8.o \
+$(OBJDIR)/gwt1ist1.o \
+$(OBJDIR)/gwf3.o \
+$(OBJDIR)/gwt1lkt1.o \
+$(OBJDIR)/gwt1.o \
+$(OBJDIR)/GwfGwtExchange.o \
 $(OBJDIR)/GwfGwfExchange.o \
 $(OBJDIR)/SimulationCreate.o \
 $(OBJDIR)/mf6core.o \
-$(OBJDIR)/mf6.o 
-
-# Define task functions
-
-# Create the bin directory and compile and link the program
-all: makebin | $(PROGRAM)
-
-# Make the bin directory for the executable
-makebin :
-	mkdir -p $(BINDIR)
+$(OBJDIR)/mf6.o
 
 # Define the objects that make up the program
 $(PROGRAM) : $(OBJECTS)
-	-$(FC) $(FFLAGS) -o $@ $(OBJECTS) $(SYSLIBS) -I$(OBJDIR) -J$(OBJDIR) 
-
-$(OBJDIR)/%.o : %.f
-	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
+	-$(FC) $(OPTLEVEL) -o $@ $(OBJECTS) $(LDFLAGS)
 
 $(OBJDIR)/%.o : %.f90
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
-
-$(OBJDIR)/%.o : %.F90
-	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
+	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 
 $(OBJDIR)/%.o : %.fpp
 	@mkdir -p $(@D)
-	$(FC) $(FFLAGS) -c $< -o $@ -I$(OBJDIR) -J$(OBJDIR) 
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
-
-$(OBJDIR)/%.o : %.c
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
-
-$(OBJDIR)/%.o : %.cpp
-	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
-	cat ./obj_temp/$*.d >> Dependencies
-	rm -f $*.d
-
-# Clean the object and module files and the executable
-.PHONY : clean
-clean : 
-	-rm -r Dependencies
-	-rm -rf $(OBJDIR)
-	-rm -rf $(PROGRAM)
-
-# Clean the object and module files
-.PHONY : cleanobj
-cleanobj : 
-	-rm -rf $(OBJDIR)
-
-# Touch dependencies
-Dependencies : 
-	touch Dependencies
+	$(FC) $(OPTLEVEL) $(FFLAGS) -c $< -o $@ $(INCSWITCH) $(MODSWITCH)
 
