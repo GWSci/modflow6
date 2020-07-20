@@ -1,11 +1,16 @@
+# Get executables and build targets
+# can compile mf6 direcetly using this command:
+#  python -c "import test000_setup; test000_setup.test_build_modflow6()"
+
 import os
 import sys
 import shutil
 import pymake
 
-os.environ["TRAVIS"] = "1"
+from framework import running_on_CI
 
-if 'TRAVIS' in os.environ:
+if running_on_CI():
+    print('running on CI environment')
     os.environ['PYMAKE_DOUBLE'] = '1'
 
 # paths to executables for  previous versions of MODFLOW
@@ -70,7 +75,7 @@ def test_getmfexes():
 
 
 def test_build_modflow6():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf6':
             txt = 'Command line cancel of MODFLOW 6 build'
@@ -98,7 +103,7 @@ def test_build_modflow6():
 
 
 def test_build_modflow6_so():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf6':
             txt = 'Command line cancel of MODFLOW 6 build'
@@ -129,7 +134,7 @@ def test_build_modflow6_so():
 
 
 def test_build_mf5to6():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nomf5to6':
             txt = 'Command line cancel of MODFLOW 5 to 6 converter build'
@@ -153,7 +158,7 @@ def test_build_mf5to6():
 
 
 def test_build_zonebudget():
-    # determine if app should be build
+    # determine if app should be built
     for idx, arg in enumerate(sys.argv):
         if arg.lower() == '--nozonebudget':
             txt = 'Command line cancel of ZONEBUDGET for MODFLOW 6 build'

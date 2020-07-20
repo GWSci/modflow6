@@ -7,7 +7,7 @@ module BndModule
                                           LENORIGIN, MAXCHARLEN, LINELENGTH,   &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
                                           TABLEFT, TABCENTER,                  &
-                                          AXSREADONLY, AXSREADWRITE
+                                          MEMREADONLY, MEMREADWRITE
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
@@ -1063,7 +1063,7 @@ module BndModule
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%origin, AXSREADWRITE)
+                      this%origin, MEMREADWRITE)
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%origin)
@@ -1179,7 +1179,7 @@ module BndModule
     ! -- dummy
     class(BndType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line
+    character(len=:), allocatable :: line
     character(len=LINELENGTH) :: fname
     character(len=LINELENGTH) :: keyword
     character(len=LENAUXNAME) :: sfacauxname
@@ -1337,7 +1337,7 @@ module BndModule
         ' OPTION BLOCK DETECTED.'
     end if
     !
-    ! -- SFAC was specified, so find column of auxvar that will be multiplier
+    ! -- AUXMULTNAME was specified, so find column of auxvar that will be multiplier
     if(this%iauxmultcol < 0) then
       !
       ! -- Error if no aux variable specified
