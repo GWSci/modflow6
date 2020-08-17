@@ -562,7 +562,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate scalars
-
+    !
     call mem_allocate(this%ivkd, 'IVKD', this%memoryPath)
     call mem_allocate(this%numvkd, 'NUMVKD', this%memoryPath)
     call mem_allocate(this%numelevs, 'NUMELEVS', this%memoryPath)
