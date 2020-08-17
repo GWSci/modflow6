@@ -3,8 +3,8 @@ module AveragingModule
   use KindModule,                 only: DP, I4B
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
                                         DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
-                                        DHNOFLO, DHDRY, DEM10, LENORIGIN,       &
-                                        LINELENGTH
+                                        DHNOFLO, DHDRY, DEM10,        &
+                                        LINELENGTH !LENORIGIN,
 
   implicit none
 

@@ -2,8 +2,7 @@ module VKDModule
   use KindModule,                 only: DP, I4B
   use ConstantsModule,            only: DZERO, DEM9, DEM8, DEM7, DEM6, DEM2,    &
                                         DHALF, DP9, DONE, DLNLOW, DLNHIGH,      &
-                                        DHNOFLO, DHDRY, DEM10, LENORIGIN,       &
-                                        LINELENGTH
+                                        DHNOFLO, DHDRY, DEM10, LINELENGTH
   use SmoothingModule,            only: sQuadraticSaturation,                   &
                                         sPChip_set_derivatives,                 &
                                         sPChip_integrate,                       &
@@ -562,21 +561,17 @@ contains
     class(VKDType) :: this
 ! ------------------------------------------------------------------------------
     !
-    ! -- Assign origin
-    this%origin = ' VKD'
-    !
     ! -- Allocate scalars
 
-    call mem_allocate(this%ivkd, 'IVKD', this%origin)
-    !call mem_allocate(this%inunit, 'INUNITVKD', this%origin)
-    call mem_allocate(this%numvkd, 'NUMVKD', this%origin)
-    call mem_allocate(this%numelevs, 'NUMELEVS', this%origin)
-    call mem_allocate(this%ikk, 'IKK', this%origin) !wittw
-    call mem_allocate(this%iek, 'IEK', this%origin) !wittw
-    call mem_allocate(this%inunit, 'INUNIT', this%origin)
-    call mem_allocate(this%iout, 'IOUT', this%origin)
-    call mem_allocate(this%iprpak, 'IPRPAK', this%origin)
-    call mem_allocate(this%implicit, 'IMPLICIT', this%origin)
+    call mem_allocate(this%ivkd, 'IVKD', this%memoryPath)
+    call mem_allocate(this%numvkd, 'NUMVKD', this%memoryPath)
+    call mem_allocate(this%numelevs, 'NUMELEVS', this%memoryPath)
+    call mem_allocate(this%ikk, 'IKK', this%memoryPath) !wittw
+    call mem_allocate(this%iek, 'IEK', this%memoryPath) !wittw
+    call mem_allocate(this%inunit, 'INUNIT', this%memoryPath)
+    call mem_allocate(this%iout, 'IOUT', this%memoryPath)
+    call mem_allocate(this%iprpak, 'IPRPAK', this%memoryPath)
+    call mem_allocate(this%implicit, 'IMPLICIT', this%memoryPath)
     !  
     ! -- Initialize value
     !

@@ -1417,7 +1417,7 @@ module GwfNpfModule
             call this%parser%GetString(fname)
             write(this%iout,fmtvkd)trim(fname)
             open(file=fname, newunit=this%inUnitVkd)
-            call vkd_cr(this%vkd, this%name, this%inUnitVkd, this%iout)
+            call vkd_cr(this%vkd, this%name_model, this%inUnitVkd, this%iout)
             
           case ('SAVE_SPECIFIC_DISCHARGE')
             this%icalcspdis = 1
