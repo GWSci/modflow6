@@ -57,7 +57,7 @@ jobs:
         pip install numpy matplotlib
         pip install https://github.com/modflowpy/flopy/zipball/develop
         pip install https://github.com/modflowpy/pymake/zipball/master
-        pip install https://github.com/Deltares/xmipy/zipball/master
+        pip install https://github.com/Deltares/xmipy/zipball/develop
 
     - name: Print conda version
       run: conda --version
@@ -122,5 +122,3 @@ jobs:
     - name: Build and test applications
       run: |
         nosetests -v --with-id --with-timer -w ./autotest
-      env:
-        repo-token: ${{secrets.GITHUB_TOKEN}}

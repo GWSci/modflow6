@@ -24,7 +24,12 @@
 !      Mover aware packages have access to the following vectors of mover
 !      information, which are stored in the PackageMoverType object:
 !
-!      integer(I4B), pointer            :: imover        => null()
+!      qtformvr(nproviders) -- total available unconsumed water for mover
+!      qformvr(nproviders) -- currently available consumed water (changes during fc)
+!      qtomvr(nproviders) -- actual amount of water sent to mover
+!      qfrommvr(nreceivers) -- actual amount of water received from mover
+!
+!      integer(I4B), pointer                        :: imover        => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtformvr      => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qformvr       => null()
 !      real(DP), dimension(:), pointer, contiguous  :: qtomvr        => null()
@@ -98,7 +103,7 @@
 !
 module GwfMvrModule
   use KindModule,             only: DP, I4B
-  use ConstantsModule,        only: LENORIGIN, LENPACKAGENAME, LENMODELNAME,   &
+  use ConstantsModule,        only: LENMEMPATH, LENPACKAGENAME, LENMODELNAME,   &
                                     LENBUDTXT, LENAUXNAME, LENPAKLOC,          &
                                     DZERO, DNODATA, MAXCHARLEN, TABCENTER,     &
                                     LINELENGTH
@@ -117,26 +122,23 @@ module GwfMvrModule
   public :: GwfMvrType, mvr_cr
 
   type, extends(NumericalPackageType) :: GwfMvrType
-
-    integer(I4B), pointer                            :: ibudgetout => null()     !binary budget output file
-    integer(I4B), pointer                            :: maxmvr => null()         !max number of movers to be specified
-    integer(I4B), pointer                            :: maxpackages => null()    !max number of packages to be specified
-    integer(I4B), pointer                            :: maxcomb => null()        !max number of combination of packages
-    integer(I4B), pointer                            :: nmvr => null()           !number of movers for current stress period
-    integer(I4B), pointer                            :: iexgmvr => null()        !indicate mover is for an exchange (not for a single model)
-    integer(I4B), pointer                            :: imodelnames => null()    !indicate package input file has model names in it
-    real(DP), pointer                                :: omega => null()          !temporal weighting factor (not presently used)
-    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !number of entries for each combination
-
-    character(len=LENORIGIN+1),                                                &
-      dimension(:), pointer, contiguous              :: pakorigins               !array of model//package names
+    integer(I4B), pointer                            :: ibudgetout => null()     !< binary budget output file
+    integer(I4B), pointer                            :: maxmvr => null()         !< max number of movers to be specified
+    integer(I4B), pointer                            :: maxpackages => null()    !< max number of packages to be specified
+    integer(I4B), pointer                            :: maxcomb => null()        !< max number of combination of packages
+    integer(I4B), pointer                            :: nmvr => null()           !< number of movers for current stress period
+    integer(I4B), pointer                            :: iexgmvr => null()        !< indicate mover is for an exchange (not for a single model)
+    integer(I4B), pointer                            :: imodelnames => null()    !< indicate package input file has model names in it
+    integer(I4B), dimension(:), pointer, contiguous  :: ientries => null()       !< number of entries for each combination
+    character(len=LENMEMPATH),                                                &
+      dimension(:), pointer, contiguous              :: pckMemPaths              !< memory paths of all packages used in this mover
     character(len=LENPACKAGENAME),                                             &
-      dimension(:), pointer, contiguous              :: paknames => null()       !array of package names
-    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !array of movers
-    type(BudgetType), pointer                        :: budget => null()         !mover budget object (used to write table)
-    type(BudgetObjectType), pointer                  :: budobj => null()         !new budget container (used to write binary file)
+      dimension(:), pointer, contiguous              :: paknames => null()       !< array of package names
+    type(MvrType), dimension(:), pointer, contiguous :: mvr => null()            !< array of movers
+    type(BudgetType), pointer                        :: budget => null()         !< mover budget object (used to write table)
+    type(BudgetObjectType), pointer                  :: budobj => null()         !< new budget container (used to write binary file)
     type(PackageMoverType),                                                    &
-      dimension(:), pointer, contiguous    :: pakmovers => null()                !pointer to package mover objects
+      dimension(:), pointer, contiguous    :: pakmovers => null()                !< pointer to package mover objects
     !
     ! -- table objects
     type(TableType), pointer :: outputtab => null()
@@ -184,7 +186,7 @@ module GwfMvrModule
     ! -- Create the object
     allocate(mvrobj)
     !
-    ! -- create name and origin.  name_parent will either be model name or the
+    ! -- create name and memory paths. name_parent will either be model name or the
     !    exchange name.
     call mvrobj%set_names(1, name_parent, 'MVR', 'MVR')
     !
@@ -203,7 +205,7 @@ module GwfMvrModule
     !
     ! -- Create the budget object
     if (inunit > 0) then
-      call budget_cr(mvrobj%budget, mvrobj%origin)
+      call budget_cr(mvrobj%budget, mvrobj%memoryPath)
       !
       ! -- Initialize block parser
       call mvrobj%parser%Initialize(mvrobj%inunit, mvrobj%iout)
@@ -351,7 +353,7 @@ module GwfMvrModule
         !
         ! -- Process the water mover line (mname = '' if this is an exchange)
         call this%mvr(i)%set(line, this%parser%iuactive, this%iout, mname,     &
-                             this%pakorigins, this%pakmovers)
+                             this%pckMemPaths, this%pakmovers)
         !
         ! -- Echo input
         if(this%iprpak == 1) call this%mvr(i)%echo(this%iout)
@@ -367,18 +369,18 @@ module GwfMvrModule
       write(this%iout, '(4x, i0, a, i0)') this%nmvr,                           &
         ' MOVERS READ FOR PERIOD ', kper
       !
-      ! -- Check to make sure all providers and receivers are in pakorigins
+      ! -- Check to make sure all providers and receivers are properly stored
       do i = 1, this%nmvr
-        ipos = ifind(this%pakorigins, this%mvr(i)%pname1)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
         if(ipos < 1) then
           write(errmsg,'(4x,a,a,a)') 'ERROR. PROVIDER ',                       &
-            trim(this%mvr(i)%pname1), ' NOT LISTED IN PACKAGES BLOCK.'
+            trim(this%mvr(i)%pckNameSrc), ' NOT LISTED IN PACKAGES BLOCK.'
           call store_error(errmsg)
         endif
-        ipos = ifind(this%pakorigins, this%mvr(i)%pname2)
+        ipos = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
         if(ipos < 1) then
           write(errmsg,'(4x,a,a,a)') 'ERROR. RECEIVER ',                       &
-            trim(this%mvr(i)%pname2), ' NOT LISTED IN PACKAGES BLOCK.'
+            trim(this%mvr(i)%pckNameTgt), ' NOT LISTED IN PACKAGES BLOCK.'
           call store_error(errmsg)
         endif
       enddo
@@ -394,18 +396,13 @@ module GwfMvrModule
       !
       ! --
       do i = 1, this%nmvr
-        ii = ifind(this%pakorigins, this%mvr(i)%pname1)
-        jj = ifind(this%pakorigins, this%mvr(i)%pname2)
+        ii = ifind(this%pckMemPaths, this%mvr(i)%pckNameSrc)
+        jj = ifind(this%pckMemPaths, this%mvr(i)%pckNameTgt)
         ipos = (ii - 1) * this%maxpackages + jj
         this%ientries(ipos) = this%ientries(ipos) + 1
       end do
     else
       write(this%iout, fmtlsp) 'MVR'
-      !
-      ! -- New stress period, but no new movers.  Set qpold to zero
-      do i = 1, this%nmvr
-        call this%mvr(i)%set_qpold(DZERO)
-      enddo
       !
     endif
     !
@@ -450,7 +447,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     do i = 1, this%nmvr
-      call this%mvr(i)%fc(this%omega)
+      call this%mvr(i)%fc()
     enddo
     !
     ! -- Return
@@ -484,7 +481,7 @@ module GwfMvrModule
     if (this%nmvr > 0) then
       if (icnvgmod == 1 .and. kiter == 1) then
         dpak = DNODATA
-        cpak = trim(this%name)
+        cpak = trim(this%packName)
         write(this%iout, fmtmvrcnvg)
       endif
     endif
@@ -552,7 +549,7 @@ module GwfMvrModule
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- locals
-    character(len=LENORIGIN+1) :: pname
+    character(len=LENMEMPATH) :: pckMemPath
     integer(I4B) :: i, j
     real(DP), allocatable, dimension(:) :: ratin, ratout
 ! ------------------------------------------------------------------------------
@@ -567,10 +564,10 @@ module GwfMvrModule
     ! -- Accumulate the rates
     do i = 1, this%nmvr
       do j = 1, this%maxpackages
-        if(this%pakorigins(j) == this%mvr(i)%pname1) then
+        if(this%pckMemPaths(j) == this%mvr(i)%pckNameSrc) then
           ratin(j) = ratin(j) + this%mvr(i)%qpactual
         endif
-        if(this%pakorigins(j) == this%mvr(i)%pname2) then
+        if(this%pckMemPaths(j) == this%mvr(i)%pckNameTgt) then
           ratout(j) = ratout(j) + this%mvr(i)%qpactual
         endif
       enddo
@@ -580,11 +577,11 @@ module GwfMvrModule
     call this%budget%reset()
     do j = 1, this%maxpackages
       if((this%iexgmvr) == 1) then
-        pname = this%pakorigins(j)
+        pckMemPath = this%pckMemPaths(j)
       else
-        pname = this%paknames(j)
+        pckMemPath = this%paknames(j)
       endif
-      call this%budget%addentry(ratin(j), ratout(j), delt, pname)
+      call this%budget%addentry(ratin(j), ratout(j), delt, pckMemPath)
     enddo
     !
     ! -- Write the budget
@@ -622,7 +619,7 @@ module GwfMvrModule
     if (this%inunit > 0) then
       call mem_deallocate(this%ientries)
       deallocate(this%mvr)
-      deallocate(this%pakorigins)
+      deallocate(this%pckMemPaths)
       deallocate(this%paknames)
       deallocate(this%pakmovers)
       !
@@ -651,7 +648,6 @@ module GwfMvrModule
     call mem_deallocate(this%nmvr)
     call mem_deallocate(this%iexgmvr)
     call mem_deallocate(this%imodelnames)
-    call mem_deallocate(this%omega)
     !
     ! -- deallocate scalars in NumericalPackageType
     call this%NumericalPackageType%da()
@@ -874,6 +870,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LINELENGTH
+    use MemoryHelperModule, only: create_mem_path
     use SimModule, only: ustop, store_error, count_errors, store_error_unit
     ! -- dummy
     class(GwfMvrType),intent(inout) :: this
@@ -905,19 +902,17 @@ module GwfMvrModule
           call ustop()
         endif
         if(this%iexgmvr == 0) then
-          this%pakorigins(npak) = trim(adjustl(this%name_model)) // ' ' // &
-            trim(word1)
+          this%pckMemPaths(npak) = create_mem_path(this%name_model, word1)
           word = word1
         else
-          this%pakorigins(npak) = trim(word1)
+          this%pckMemPaths(npak) = trim(word1)
           call this%parser%GetStringCaps(word2)
-          this%pakorigins(npak) = trim(this%pakorigins(npak)) // ' ' //    &
-            trim(word2)
+          this%pckMemPaths(npak) = create_mem_path(this%pckMemPaths(npak), word2)
           word = word2
         endif
         this%paknames(npak) = trim(word)
         write(this%iout,'(3x,a,a)')'INCLUDING PACKAGE: ',                  &
-          trim(this%pakorigins(npak))
+          trim(this%pckMemPaths(npak))
       end do
       write(this%iout,'(1x,a)')'END OF MVR PACKAGES'
     else
@@ -961,13 +956,13 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Check to make sure mover is activated for each package
-    do i = 1, size(this%pakorigins)
+    do i = 1, size(this%pckMemPaths)
       imover_ptr => null()
-      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pakorigins(i)))
+      call mem_setptr(imover_ptr, 'IMOVER', trim(this%pckMemPaths(i)))
       if (imover_ptr == 0) then
         write(errmsg, '(a, a, a)') &
                           'ERROR.  MODEL AND PACKAGE "', &
-                          trim(this%pakorigins(i)), &
+                          trim(this%pckMemPaths(i)), &
                           '" DOES NOT HAVE MOVER SPECIFIED IN OPTIONS BLOCK.'
         call store_error(errmsg)
       end if
@@ -1000,10 +995,10 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Assign the package mover pointer if it hasn't been assigned yet
-    do i = 1, size(this%pakorigins)
-      if (this%pakmovers(i)%origin == '') then
+    do i = 1, size(this%pckMemPaths)
+      if (this%pakmovers(i)%memoryPath == '') then
         call set_packagemover_pointer(this%pakmovers(i), &
-                                      trim(this%pakorigins(i)))
+                                      trim(this%pckMemPaths(i)))
       end if
     end do
     !
@@ -1030,14 +1025,13 @@ module GwfMvrModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%omega, 'OMEGA', this%origin)
-    call mem_allocate(this%maxmvr, 'MAXMVR', this%origin)
-    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%origin)
-    call mem_allocate(this%maxcomb, 'MAXCOMB', this%origin)
-    call mem_allocate(this%nmvr, 'NMVR', this%origin)
-    call mem_allocate(this%iexgmvr, 'IEXGMVR', this%origin)
-    call mem_allocate(this%imodelnames, 'IMODELNAMES', this%origin)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%maxmvr, 'MAXMVR', this%memoryPath)
+    call mem_allocate(this%maxpackages, 'MAXPACKAGES', this%memoryPath)
+    call mem_allocate(this%maxcomb, 'MAXCOMB', this%memoryPath)
+    call mem_allocate(this%nmvr, 'NMVR', this%memoryPath)
+    call mem_allocate(this%iexgmvr, 'IEXGMVR', this%memoryPath)
+    call mem_allocate(this%imodelnames, 'IMODELNAMES', this%memoryPath)
     !
     ! -- Initialize
     this%ibudgetout = 0
@@ -1047,7 +1041,6 @@ module GwfMvrModule
     this%nmvr = 0
     this%iexgmvr = 0
     this%imodelnames = 0
-    this%omega = DONE
     !
     ! -- Return
     return
@@ -1072,7 +1065,7 @@ module GwfMvrModule
     !
     ! -- Allocate
     allocate(this%mvr(this%maxmvr))
-    allocate(this%pakorigins(this%maxpackages))
+    allocate(this%pckMemPaths(this%maxpackages))
     allocate(this%paknames(this%maxpackages))
     allocate(this%pakmovers(this%maxpackages))
     !
@@ -1082,7 +1075,7 @@ module GwfMvrModule
     end do
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%origin)
+    call mem_allocate(this%ientries, this%maxcomb, 'IENTRIES', this%memoryPath)
     !
     ! -- setup the output table
     call this%mvr_setup_outputtab()
@@ -1100,6 +1093,7 @@ module GwfMvrModule
 ! ------------------------------------------------------------------------------
     ! -- modules
     use ConstantsModule, only: LENBUDTXT
+    use MemoryHelperModule, only: split_mem_path
     ! -- dummy
     class(GwfMvrType) :: this
     ! -- local
@@ -1107,15 +1101,9 @@ module GwfMvrModule
     integer(I4B) :: ncv
     integer(I4B) :: i
     integer(I4B) :: j
-    integer(I4B) :: ival
     integer(I4B) :: naux
-    integer(I4B) :: lloc
-    integer(I4B) :: istart
-    integer(I4B) :: istop
-    real(DP) :: rval
     character (len=LENMODELNAME) :: modelname1, modelname2
     character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENORIGIN+1) :: pakoriginsdummy
     integer(I4B) :: maxlist
     integer(I4B) :: idx
     character(len=LENBUDTXT) :: text
@@ -1145,22 +1133,13 @@ module GwfMvrModule
     maxlist = this%maxmvr
     naux = 0
     do i = 1, this%maxpackages
-      lloc = 1
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
-      modelname1 = pakoriginsdummy(istart:istop)
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
-      packagename1 = pakoriginsdummy(istart:istop)
-      do j = 1, this%maxpackages
-        lloc = 1
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
-        modelname2 = pakoriginsdummy(istart:istop)
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
-        packagename2 = pakoriginsdummy(istart:istop)
+      
+      call split_mem_path(this%pckMemPaths(i), modelname1, packagename1)
+      
+      do j = 1, this%maxpackages  
+        
         idx = idx + 1
+        call split_mem_path(this%pckMemPaths(j), modelname2, packagename2)
         call this%budobj%budterm(idx)%initialize(text, &
                                                  modelname1, &
                                                  packagename1, &
@@ -1199,7 +1178,7 @@ module GwfMvrModule
     real(DP) :: rval
     character (len=LENMODELNAME) :: modelname1, modelname2
     character (len=LENPACKAGENAME) :: packagename1, packagename2
-    character (len=LENORIGIN+1) :: pakoriginsdummy
+    character (len=LENMEMPATH) :: pckMemPathsDummy
     real(DP) :: q
     ! -- formats
 ! -----------------------------------------------------------------------------
@@ -1211,21 +1190,21 @@ module GwfMvrModule
     do i = 1, this%maxpackages
       ! -- Retrieve modelname1 and packagename1
       lloc = 1
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
-      modelname1 = pakoriginsdummy(istart:istop)
-      call urword(this%pakorigins(i), lloc, istart, istop, 1, ival, rval, -1, -1)
-      pakoriginsdummy = this%pakorigins(i)
-      packagename1 = pakoriginsdummy(istart:istop)
+      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pckMemPathsDummy = this%pckMemPaths(i)
+      modelname1 = pckMemPathsDummy(istart:istop)
+      call urword(this%pckMemPaths(i), lloc, istart, istop, 1, ival, rval, -1, -1)
+      pckMemPathsDummy = this%pckMemPaths(i)
+      packagename1 = pckMemPathsDummy(istart:istop)
       do j = 1, this%maxpackages
         ! -- Retrieve modelname2 and packagename2
         lloc = 1
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
-        modelname2 = pakoriginsdummy(istart:istop)
-        call urword(this%pakorigins(j), lloc, istart, istop, 1, ival, rval, -1, -1)
-        pakoriginsdummy = this%pakorigins(j)
-        packagename2 = pakoriginsdummy(istart:istop)
+        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pckMemPathsDummy = this%pckMemPaths(j)
+        modelname2 = pckMemPathsDummy(istart:istop)
+        call urword(this%pckMemPaths(j), lloc, istart, istop, 1, ival, rval, -1, -1)
+        pckMemPathsDummy = this%pckMemPaths(j)
+        packagename2 = pckMemPathsDummy(istart:istop)
         ipos = (i - 1) * this%maxpackages + j
         nitems = this%ientries(ipos)
         !
@@ -1238,18 +1217,18 @@ module GwfMvrModule
           !
           ! -- pname1 is provider, pname2 is receiver
           !    flow is always negative because it is coming from provider
-          if(this%pakorigins(i) == this%mvr(n)%pname1) then
-            if(this%pakorigins(j) == this%mvr(n)%pname2) then
+          if(this%pckMemPaths(i) == this%mvr(n)%pckNameSrc) then
+            if(this%pckMemPaths(j) == this%mvr(n)%pckNameTgt) then
               !
               ! -- set q to qpactual
               q = -this%mvr(n)%qpactual
               !
               ! -- map from irch1 to feature (needed for lake to map outlet to lake number)
-              n1 = this%mvr(n)%irch1
+              n1 = this%mvr(n)%iRchNrSrc
               n1 = this%pakmovers(i)%iprmap(n1)
               !
               ! -- set receiver id to irch2
-              n2 = this%mvr(n)%irch2
+              n2 = this%mvr(n)%iRchNrTgt
               !
               ! -- check record into budget object
               call this%budobj%budterm(idx)%update_term(n1, n2, q)
@@ -1289,9 +1268,9 @@ module GwfMvrModule
       ntabcol = 7
       !
       ! -- initialize the output table object
-      title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+      title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
               ') FLOW RATES'
-      call table_cr(this%outputtab, this%name, title)
+      call table_cr(this%outputtab, this%packName, title)
       call this%outputtab%table_df(this%maxmvr, ntabcol, this%iout,            &
                                     transient=.TRUE.)
       text = 'NUMBER'
@@ -1324,6 +1303,7 @@ module GwfMvrModule
 !
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
+    ! -- module
     use TdisModule, only: kstp, kper
     ! -- dummy
     class(GwfMvrType),intent(inout) :: this
@@ -1336,18 +1316,18 @@ module GwfMvrModule
     call this%outputtab%set_kstpkper(kstp, kper)
     !
     ! -- Add terms and print the table
-    title = 'WATER MOVER PACKAGE (' // trim(this%name) //     &
+    title = 'WATER MOVER PACKAGE (' // trim(this%packName) //     &
             ') FLOW RATES'
     call this%outputtab%set_title(title)
     call this%outputtab%set_maxbound(this%nmvr)
     do i = 1, this%nmvr
       call this%outputtab%add_term(i)
-      call this%outputtab%add_term(this%mvr(i)%pname1)
-      call this%outputtab%add_term(this%mvr(i)%irch1)
-      call this%outputtab%add_term(this%mvr(i)%qanew)
+      call this%outputtab%add_term(this%mvr(i)%pckNameSrc)
+      call this%outputtab%add_term(this%mvr(i)%iRchNrSrc)
+      call this%outputtab%add_term(this%mvr(i)%qavailable)
       call this%outputtab%add_term(this%mvr(i)%qpactual)
-      call this%outputtab%add_term(this%mvr(i)%pname2)
-      call this%outputtab%add_term(this%mvr(i)%irch2)
+      call this%outputtab%add_term(this%mvr(i)%pckNameTgt)
+      call this%outputtab%add_term(this%mvr(i)%iRchNrTgt)
     end do
     !
     ! -- return

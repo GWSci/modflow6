@@ -2,14 +2,10 @@
   ! velocity is incorrect for a triangular corner cell if two edges are on model perimeter
   ! newton-raphson (head below bottom); more testing
   ! transport when cells are dry (IBOUND=0)
-  ! sub timing; what to do about output control
-  ! systematic approach to testing
   ! verify that idomain is working (can transport have a different idomain?)
   ! check that discretization is the same between both models 
   ! now that immobile domain is separate package, should sorbtion and decay be split?
-  ! move the fmi flow error term into the ssm package?
   ! Add internal GWF flows to the diagonal postion of the flowja array
-  ! Write CQ transport routine and add internal GWT flows to flowja array
   ! gwt obs
   ! adv obs
   ! dsp obs
@@ -18,23 +14,11 @@
   ! ssm obs
   ! src obs
   ! cnc obs
-  ! variable density flow package
-  ! heat transport input
-  ! memory deallocation
-  ! code profiling (how do run times compare with mt3d/seawat?)
   ! GWF-GWF exchange transport
   ! transient flow case; verify that its working properly, test with goode 1990
-  ! transport-only (using saved flow budget files)
-  ! transport for SFR, LAK, MAW, UZF
-  ! What to do about MVR?  Should go into SSM.
   ! implement steady-state transport (affects MST, IST)
-  ! update user guide to reflect changes to MST, and IST
-  ! update user guide to include conceptual sketch of the packages
-  ! refactor code to use the MST and IST packages to replace STO, SRB, DCY, and IMD
   ! pore space discrepancy between flow and transport (porosity vs specific yield)
-  ! add separate heat transport model?
   ! xt3d dispersion areas need to be consistent with non-xt3d case
-  ! the gwf_fc routines need updating for the mover calculation to hcof and rhs
   
   
 module GwtModule
@@ -134,6 +118,7 @@ module GwtModule
     use ConstantsModule,            only: LINELENGTH, LENPACKAGENAME
     use CompilerVersion
     use MemoryManagerModule,        only: mem_allocate
+    use MemoryHelperModule,         only: create_mem_path
     use GwfDisModule,               only: dis_cr
     use GwfDisvModule,              only: disv_cr
     use GwfDisuModule,              only: disu_cr
@@ -166,6 +151,10 @@ module GwtModule
     !
     ! -- Allocate a new GWT Model (this) and add it to basemodellist
     allocate(this)
+    !
+    ! -- Set this before any allocs in the memory manager can be done
+    this%memoryPath = create_mem_path(modelname)
+    !
     call this%allocate_scalars(modelname)
     model => this
     call AddBaseModelToList(basemodellist, model)
@@ -757,9 +746,7 @@ module GwtModule
     !
     ! -- Calculate and write simulated values for observations
     if(iprobs /= 0) then
-      if (icnvg > 0) then
-        call this%obs%obs_bd()
-      endif
+      call this%obs%obs_bd()
     endif
     !
     ! -- Return
@@ -825,17 +812,9 @@ module GwtModule
       &I0,' OF STRESS PERIOD ',I0,'****')"
 ! ------------------------------------------------------------------------------
     !
-    ! -- Set ibudfl flag for printing budget information
-    ibudfl = 0
-    if(this%oc%oc_print('BUDGET')) ibudfl = 1
-    if(this%icnvg == 0) ibudfl = 1
-    if(endofperiod) ibudfl = 1
-    !
-    ! -- Set ibudfl flag for printing dependent variable information
-    ihedfl = 0
-    if(this%oc%oc_print('CONCENTRATION')) ihedfl = 1
-    if(this%icnvg == 0) ihedfl = 1
-    if(endofperiod) ihedfl = 1
+    ! -- Set ibudfl and ihedfl flags for printing budget and conc information
+    ibudfl = this%oc%set_print_flag('BUDGET', this%icnvg, endofperiod)
+    ihedfl = this%oc%set_print_flag('CONCENTRATION', this%icnvg, endofperiod)
     !
     ! -- Output individual flows if requested
     if(ibudfl /= 0) then
@@ -1001,15 +980,15 @@ module GwtModule
     call this%NumericalModelType%allocate_scalars(modelname)
     !
     ! -- allocate members that are part of model class
-    call mem_allocate(this%inic , 'INIC',  modelname)
-    call mem_allocate(this%infmi, 'INFMI', modelname)
-    call mem_allocate(this%inmvt, 'INMVT', modelname)
-    call mem_allocate(this%inmst, 'INMST', modelname)
-    call mem_allocate(this%inadv, 'INADV', modelname)
-    call mem_allocate(this%indsp, 'INDSP', modelname)
-    call mem_allocate(this%inssm, 'INSSM', modelname)
-    call mem_allocate(this%inoc,  'INOC ', modelname)
-    call mem_allocate(this%inobs, 'INOBS', modelname)
+    call mem_allocate(this%inic , 'INIC',  this%memoryPath)
+    call mem_allocate(this%infmi, 'INFMI', this%memoryPath)
+    call mem_allocate(this%inmvt, 'INMVT', this%memoryPath)
+    call mem_allocate(this%inmst, 'INMST', this%memoryPath)
+    call mem_allocate(this%inadv, 'INADV', this%memoryPath)
+    call mem_allocate(this%indsp, 'INDSP', this%memoryPath)
+    call mem_allocate(this%inssm, 'INSSM', this%memoryPath)
+    call mem_allocate(this%inoc,  'INOC ', this%memoryPath)
+    call mem_allocate(this%inobs, 'INOBS', this%memoryPath)
     !
     this%inic  = 0
     this%infmi = 0
@@ -1092,7 +1071,7 @@ module GwtModule
     ! -- position of packages.
       do ip = 1, this%bndlist%Count()
         packobj2 => GetBndFromList(this%bndlist, ip)
-        if(packobj2%name == pakname) then
+        if(packobj2%packName == pakname) then
           write(errmsg, '(a,a)') 'Cannot create package.  Package name  ' //   &
             'already exists: ', trim(pakname)
           call store_error(errmsg)

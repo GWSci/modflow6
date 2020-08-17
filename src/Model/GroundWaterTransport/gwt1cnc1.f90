@@ -237,7 +237,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- modules
-    use TdisModule, only: delt
+    use TdisModule, only: delt, kstp, kper
     use ConstantsModule, only: LENBOUNDNAME
     use BudgetModule, only: BudgetType
     ! -- dummy
@@ -261,8 +261,6 @@ contains
     ! -- for observations
     character(len=LENBOUNDNAME) :: bname
     ! -- formats
-    character(len=*), parameter :: fmttkk = &
-      "(1X,/1X,A,'   PERIOD ',I0,'   STEP ',I0)"
 ! ------------------------------------------------------------------------------
     !
     chin = DZERO
@@ -283,7 +281,7 @@ contains
     if(ibinun /= 0) then
       naux = this%naux
       call this%dis%record_srcdst_list_header(this%text, this%name_model,      &
-                  this%name_model, this%name_model, this%name, naux,           &
+                  this%name_model, this%name_model, this%packName, naux,           &
                   this%auxname, ibinun, this%nbound, this%iout)
     endif
     !
@@ -292,6 +290,7 @@ contains
       !
       ! -- reset size of table
       if (this%iprflow /= 0) then
+        call this%outputtab%set_kstpkper(kstp, kper)
         call this%outputtab%set_maxbound(this%nbound)
       end if
       !
@@ -356,7 +355,7 @@ contains
     !
     ! -- Store the rates
     call model_budget%addentry(chin, chout, delt, this%text,                   &
-                               isuppress_output, this%name)
+                               isuppress_output, this%packName)
     !
     ! -- Save the simulated values to the ObserveType objects
     if (this%obs%npakobs > 0 .and. iprobs > 0) then

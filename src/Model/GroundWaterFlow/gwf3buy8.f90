@@ -1212,11 +1212,14 @@ module GwfBuyModule
     class(GwfBuyType) :: this
     ! -- local
     character(len=LINELENGTH) :: errmsg
+    character(len=LINELENGTH) :: line
     integer(I4B) :: ierr
     integer(I4B) :: irhospec
     logical :: isfound, endOfBlock
     logical :: blockrequired
     integer(I4B), dimension(:), allocatable :: itemp
+    character(len=10) :: c10
+    character(len=16) :: c16
     ! -- format
     character(len=*),parameter :: fmterr = &
       "('INVALID VALUE FOR IRHOSPEC (',i0,') DETECTED IN BUY PACKAGE. &
@@ -1233,7 +1236,7 @@ module GwfBuyModule
     call this%parser%GetBlock('PACKAGEDATA', isfound, ierr,                    &
                               blockRequired=blockRequired)
     !
-    ! -- parse options block if detected
+    ! -- parse packagedata block
     if (isfound) then
       write(this%iout,'(1x,a)')'PROCESSING BUY PACKAGEDATA'
       do
@@ -1262,6 +1265,25 @@ module GwfBuyModule
       call this%parser%StoreErrorUnit()
       call ustop()
     end if
+    !
+    ! -- write packagedata information
+    write(this%iout, '(/,a)') 'SUMMARY OF SPECIES INFORMATION IN BUY PACKAGE'
+    write(this%iout, '(3a11, 2a17)') &
+                         'SPECIES', 'DRHODC', 'CRHOREF', 'MODEL', &
+                         'AUXSPECIESNAME'
+    do irhospec = 1, this%nrhospecies
+      write(c10, '(i0)') irhospec
+      line = ' ' // adjustr(c10)
+      write(c10, '(g10.4)') this%drhodc(irhospec)
+      line = trim(line) // ' ' // adjustr(c10)
+      write(c10, '(g10.4)') this%crhoref(irhospec)
+      line = trim(line) // ' ' // adjustr(c10)
+      write(c16, '(a)') this%cmodelname(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
+      write(c16, '(a)') this%cauxspeciesname(irhospec)
+      line = trim(line) // ' ' // adjustr(c16)
+      write(this%iout, '(a)') trim(line)
+    end do
     !
     ! -- deallocate
     deallocate(itemp)
@@ -1540,14 +1562,14 @@ module GwfBuyModule
     call this%NumericalPackageType%allocate_scalars()
     !
     ! -- Allocate
-    call mem_allocate(this%ioutdense, 'IOUTDENSE', this%origin)
-    call mem_allocate(this%iform, 'IFORM', this%origin)
-    call mem_allocate(this%ireadelev, 'IREADELEV', this%origin)
-    call mem_allocate(this%ireadconcbuy, 'IREADCONCBUY', this%origin)
-    call mem_allocate(this%iconcset, 'ICONCSET', this%origin)
-    call mem_allocate(this%denseref, 'DENSEREF', this%origin)
+    call mem_allocate(this%ioutdense, 'IOUTDENSE', this%memoryPath)
+    call mem_allocate(this%iform, 'IFORM', this%memoryPath)
+    call mem_allocate(this%ireadelev, 'IREADELEV', this%memoryPath)
+    call mem_allocate(this%ireadconcbuy, 'IREADCONCBUY', this%memoryPath)
+    call mem_allocate(this%iconcset, 'ICONCSET', this%memoryPath)
+    call mem_allocate(this%denseref, 'DENSEREF', this%memoryPath)
 
-    call mem_allocate(this%nrhospecies, 'NRHOSPECIES', this%origin)
+    call mem_allocate(this%nrhospecies, 'NRHOSPECIES', this%memoryPath)
     
     !
     ! -- Initialize
@@ -1584,12 +1606,12 @@ module GwfBuyModule
 ! ------------------------------------------------------------------------------
     !
     ! -- Allocate
-    call mem_allocate(this%dense, nodes, 'DENSE', this%origin)
-    call mem_allocate(this%concbuy, 0, 'CONCBUY', this%origin)
-    call mem_allocate(this%elev, nodes, 'ELEV', this%origin)
-    call mem_allocate(this%drhodc, this%nrhospecies, 'DRHODC', this%origin)
-    call mem_allocate(this%crhoref, this%nrhospecies, 'CRHOREF', this%origin)
-    call mem_allocate(this%ctemp, this%nrhospecies, 'CTEMP', this%origin)
+    call mem_allocate(this%dense, nodes, 'DENSE', this%memoryPath)
+    call mem_allocate(this%concbuy, 0, 'CONCBUY', this%memoryPath)
+    call mem_allocate(this%elev, nodes, 'ELEV', this%memoryPath)
+    call mem_allocate(this%drhodc, this%nrhospecies, 'DRHODC', this%memoryPath)
+    call mem_allocate(this%crhoref, this%nrhospecies, 'CRHOREF', this%memoryPath)
+    call mem_allocate(this%ctemp, this%nrhospecies, 'CTEMP', this%memoryPath)
     allocate(this%cmodelname(this%nrhospecies))
     allocate(this%cauxspeciesname(this%nrhospecies))
     allocate(this%modelconc(this%nrhospecies))
@@ -1732,7 +1754,7 @@ module GwfBuyModule
       case ('CONCENTRATION')
         if (this%ireadconcbuy == 0) then
           call mem_reallocate(this%concbuy, this%dis%nodes, 'CONCBUY',         &
-            this%origin)
+            this%memoryPath)
         end if
         this%ireadconcbuy = 1
         call this%dis%read_grid_array(line, lloc, istart, istop, this%iout,    &

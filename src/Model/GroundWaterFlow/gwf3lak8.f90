@@ -13,6 +13,7 @@ module LakModule
                              TABSTRING, TABUCSTRING, TABINTEGER, TABREAL
   use MemoryManagerModule, only: mem_allocate, mem_reallocate, mem_setptr,     &
                                  mem_deallocate
+  use MemoryHelperModule, only: create_mem_path
   use SmoothingModule,  only: sQuadraticSaturation, sQSaturation,              &
                               sQuadraticSaturationDerivative,                  &
                               sQSaturationDerivative
@@ -25,9 +26,9 @@ module LakModule
   use BaseDisModule, only: DisBaseType
   use SimModule,           only: count_errors, store_error, ustop
   use GenericUtilitiesModule, only: sim_message
-  use ArrayHandlersModule, only: ExpandArray
   use BlockParserModule,   only: BlockParserType
   use BaseDisModule,       only: DisBaseType
+  use SimVariablesModule, only: errmsg
   !
   implicit none
   !
@@ -300,7 +301,7 @@ contains
     packobj%ibcnum = ibcnum
     packobj%ncolbnd = 3
     packobj%iscloc = 0  ! not supported
-    packobj%ictorigin = 'NPF'
+    packobj%ictMemPath = create_mem_path(namemodel,'NPF')
     !
     ! -- return
     return
@@ -321,26 +322,26 @@ contains
     call this%BndType%allocate_scalars()
     !
     ! -- allocate the object and assign values to object variables
-    call mem_allocate(this%iprhed, 'IPRHED', this%origin)
-    call mem_allocate(this%istageout, 'ISTAGEOUT', this%origin)
-    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%origin)
-    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%origin)
-    call mem_allocate(this%nlakes, 'NLAKES', this%origin)
-    call mem_allocate(this%noutlets, 'NOUTLETS', this%origin)
-    call mem_allocate(this%ntables, 'NTABLES', this%origin)
-    call mem_allocate(this%convlength, 'CONVLENGTH', this%origin)
-    call mem_allocate(this%convtime, 'CONVTIME', this%origin)
-    call mem_allocate(this%outdmax, 'OUTDMAX', this%origin)
-    call mem_allocate(this%igwhcopt, 'IGWHCOPT', this%origin)
-    call mem_allocate(this%iconvchk, 'ICONVCHK', this%origin)
-    call mem_allocate(this%iconvresidchk, 'ICONVRESIDCHK', this%origin)
-    call mem_allocate(this%surfdep, 'SURFDEP', this%origin)
-    call mem_allocate(this%delh, 'DELH', this%origin)
-    call mem_allocate(this%pdmax, 'PDMAX', this%origin)
-    call mem_allocate(this%check_attr, 'check_attr', this%origin)
-    call mem_allocate(this%bditems, 'BDITEMS', this%origin)
-    call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%origin)
-    call mem_allocate(this%idense, 'IDENSE', this%origin)
+    call mem_allocate(this%iprhed, 'IPRHED', this%memoryPath)
+    call mem_allocate(this%istageout, 'ISTAGEOUT', this%memoryPath)
+    call mem_allocate(this%ibudgetout, 'IBUDGETOUT', this%memoryPath)
+    call mem_allocate(this%ipakcsv, 'IPAKCSV', this%memoryPath)
+    call mem_allocate(this%nlakes, 'NLAKES', this%memoryPath)
+    call mem_allocate(this%noutlets, 'NOUTLETS', this%memoryPath)
+    call mem_allocate(this%ntables, 'NTABLES', this%memoryPath)
+    call mem_allocate(this%convlength, 'CONVLENGTH', this%memoryPath)
+    call mem_allocate(this%convtime, 'CONVTIME', this%memoryPath)
+    call mem_allocate(this%outdmax, 'OUTDMAX', this%memoryPath)
+    call mem_allocate(this%igwhcopt, 'IGWHCOPT', this%memoryPath)
+    call mem_allocate(this%iconvchk, 'ICONVCHK', this%memoryPath)
+    call mem_allocate(this%iconvresidchk, 'ICONVRESIDCHK', this%memoryPath)
+    call mem_allocate(this%surfdep, 'SURFDEP', this%memoryPath)
+    call mem_allocate(this%delh, 'DELH', this%memoryPath)
+    call mem_allocate(this%pdmax, 'PDMAX', this%memoryPath)
+    call mem_allocate(this%check_attr, 'check_attr', this%memoryPath)
+    call mem_allocate(this%bditems, 'BDITEMS', this%memoryPath)
+    call mem_allocate(this%cbcauxitems, 'CBCAUXITEMS', this%memoryPath)
+    call mem_allocate(this%idense, 'IDENSE', this%memoryPath)
     !
     ! -- Set values
     this%iprhed = 0
@@ -402,35 +403,35 @@ contains
     !
     ! -- allocate and initialize dbuff
     if (this%istageout > 0) then
-      call mem_allocate(this%dbuff, this%nlakes, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, this%nlakes, 'DBUFF', this%memoryPath)
       do i = 1, this%nlakes
         this%dbuff(i) = DZERO
       end do
     else
-      call mem_allocate(this%dbuff, 0, 'DBUFF', this%origin)
+      call mem_allocate(this%dbuff, 0, 'DBUFF', this%memoryPath)
     end if
     !
     ! -- allocate character array for budget text
     allocate(this%cauxcbc(this%cbcauxitems))
     !
     ! -- allocate and initialize qauxcbc
-    call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%origin)
+    call mem_allocate(this%qauxcbc, this%cbcauxitems, 'QAUXCBC', this%memoryPath)
     do i = 1, this%cbcauxitems
       this%qauxcbc(i) = DZERO
     end do
     !
     ! -- allocate qleak and qsto
-    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%origin)
+    call mem_allocate(this%qleak, this%maxbound, 'QLEAK', this%memoryPath)
     do i = 1, this%maxbound
       this%qleak(i) = DZERO
     end do
-    call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%origin)
+    call mem_allocate(this%qsto, this%nlakes, 'QSTO', this%memoryPath)
     do i = 1, this%nlakes
       this%qsto(i) = DZERO
     end do
     !
     ! -- allocate denseterms to size 0
-    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%origin)
+    call mem_allocate(this%denseterms, 3, 0, 'DENSETERMS', this%memoryPath)
     !
     ! -- return
     return
@@ -450,7 +451,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text
     character(len=LENBOUNDNAME) :: bndName, bndNameTemp
     character(len=9) :: cno
@@ -473,57 +473,57 @@ contains
     itmp = 0
     !
     ! -- allocate lake data
-    call mem_allocate(this%nlakeconn, this%nlakes, 'NLAKECONN', this%origin)
-    call mem_allocate(this%idxlakeconn, this%nlakes+1, 'IDXLAKECONN', this%origin)
-    call mem_allocate(this%ntabrow, this%nlakes, 'NTABROW', this%origin)
-    call mem_allocate(this%strt, this%nlakes, 'STRT', this%origin)
-    call mem_allocate(this%laketop, this%nlakes, 'LAKETOP', this%origin)
-    call mem_allocate(this%lakebot, this%nlakes, 'LAKEBOT', this%origin)
-    call mem_allocate(this%sareamax, this%nlakes, 'SAREAMAX', this%origin)
-    call mem_allocate(this%stage, this%nlakes, 'STAGE', this%origin)
-    call mem_allocate(this%rainfall, this%nlakes, 'RAINFALL', this%origin)
-    call mem_allocate(this%evaporation, this%nlakes, 'EVAPORATION', this%origin)
-    call mem_allocate(this%runoff, this%nlakes, 'RUNOFF', this%origin)
-    call mem_allocate(this%inflow, this%nlakes, 'INFLOW', this%origin)
-    call mem_allocate(this%withdrawal, this%nlakes, 'WITHDRAWAL', this%origin)
-    call mem_allocate(this%lauxvar, this%naux, this%nlakes, 'LAUXVAR', this%origin)
-    call mem_allocate(this%avail, this%nlakes, 'AVAIL', this%origin)
-    call mem_allocate(this%lkgwsink, this%nlakes, 'LKGWSINK', this%origin)
-    call mem_allocate(this%ncncvr, this%nlakes, 'NCNCVR', this%origin)
-    call mem_allocate(this%surfin, this%nlakes, 'SURFIN', this%origin)
-    call mem_allocate(this%surfout, this%nlakes, 'SURFOUT', this%origin)
-    call mem_allocate(this%surfout1, this%nlakes, 'SURFOUT1', this%origin)
-    call mem_allocate(this%precip, this%nlakes, 'PRECIP', this%origin)
-    call mem_allocate(this%precip1, this%nlakes, 'PRECIP1', this%origin)
-    call mem_allocate(this%evap, this%nlakes, 'EVAP', this%origin)
-    call mem_allocate(this%evap1, this%nlakes, 'EVAP1', this%origin)
-    call mem_allocate(this%evapo, this%nlakes, 'EVAPO', this%origin)
-    call mem_allocate(this%withr, this%nlakes, 'WITHR', this%origin)
-    call mem_allocate(this%withr1, this%nlakes, 'WITHR1', this%origin)
-    call mem_allocate(this%flwin, this%nlakes, 'FLWIN', this%origin)
-    call mem_allocate(this%flwiter, this%nlakes, 'FLWITER', this%origin)
-    call mem_allocate(this%flwiter1, this%nlakes, 'FLWITER1', this%origin)
-    call mem_allocate(this%seep, this%nlakes, 'SEEP', this%origin)
-    call mem_allocate(this%seep1, this%nlakes, 'SEEP1', this%origin)
-    call mem_allocate(this%seep0, this%nlakes, 'SEEP0', this%origin)
-    call mem_allocate(this%stageiter, this%nlakes, 'STAGEITER', this%origin)
-    call mem_allocate(this%chterm, this%nlakes, 'CHTERM', this%origin)
+    call mem_allocate(this%nlakeconn, this%nlakes, 'NLAKECONN', this%memoryPath)
+    call mem_allocate(this%idxlakeconn, this%nlakes+1, 'IDXLAKECONN', this%memoryPath)
+    call mem_allocate(this%ntabrow, this%nlakes, 'NTABROW', this%memoryPath)
+    call mem_allocate(this%strt, this%nlakes, 'STRT', this%memoryPath)
+    call mem_allocate(this%laketop, this%nlakes, 'LAKETOP', this%memoryPath)
+    call mem_allocate(this%lakebot, this%nlakes, 'LAKEBOT', this%memoryPath)
+    call mem_allocate(this%sareamax, this%nlakes, 'SAREAMAX', this%memoryPath)
+    call mem_allocate(this%stage, this%nlakes, 'STAGE', this%memoryPath)
+    call mem_allocate(this%rainfall, this%nlakes, 'RAINFALL', this%memoryPath)
+    call mem_allocate(this%evaporation, this%nlakes, 'EVAPORATION', this%memoryPath)
+    call mem_allocate(this%runoff, this%nlakes, 'RUNOFF', this%memoryPath)
+    call mem_allocate(this%inflow, this%nlakes, 'INFLOW', this%memoryPath)
+    call mem_allocate(this%withdrawal, this%nlakes, 'WITHDRAWAL', this%memoryPath)
+    call mem_allocate(this%lauxvar, this%naux, this%nlakes, 'LAUXVAR', this%memoryPath)
+    call mem_allocate(this%avail, this%nlakes, 'AVAIL', this%memoryPath)
+    call mem_allocate(this%lkgwsink, this%nlakes, 'LKGWSINK', this%memoryPath)
+    call mem_allocate(this%ncncvr, this%nlakes, 'NCNCVR', this%memoryPath)
+    call mem_allocate(this%surfin, this%nlakes, 'SURFIN', this%memoryPath)
+    call mem_allocate(this%surfout, this%nlakes, 'SURFOUT', this%memoryPath)
+    call mem_allocate(this%surfout1, this%nlakes, 'SURFOUT1', this%memoryPath)
+    call mem_allocate(this%precip, this%nlakes, 'PRECIP', this%memoryPath)
+    call mem_allocate(this%precip1, this%nlakes, 'PRECIP1', this%memoryPath)
+    call mem_allocate(this%evap, this%nlakes, 'EVAP', this%memoryPath)
+    call mem_allocate(this%evap1, this%nlakes, 'EVAP1', this%memoryPath)
+    call mem_allocate(this%evapo, this%nlakes, 'EVAPO', this%memoryPath)
+    call mem_allocate(this%withr, this%nlakes, 'WITHR', this%memoryPath)
+    call mem_allocate(this%withr1, this%nlakes, 'WITHR1', this%memoryPath)
+    call mem_allocate(this%flwin, this%nlakes, 'FLWIN', this%memoryPath)
+    call mem_allocate(this%flwiter, this%nlakes, 'FLWITER', this%memoryPath)
+    call mem_allocate(this%flwiter1, this%nlakes, 'FLWITER1', this%memoryPath)
+    call mem_allocate(this%seep, this%nlakes, 'SEEP', this%memoryPath)
+    call mem_allocate(this%seep1, this%nlakes, 'SEEP1', this%memoryPath)
+    call mem_allocate(this%seep0, this%nlakes, 'SEEP0', this%memoryPath)
+    call mem_allocate(this%stageiter, this%nlakes, 'STAGEITER', this%memoryPath)
+    call mem_allocate(this%chterm, this%nlakes, 'CHTERM', this%memoryPath)
     !
     ! -- lake boundary and stages
-    call mem_allocate(this%iboundpak, this%nlakes, 'IBOUND', this%origin)
-    call mem_allocate(this%xnewpak, this%nlakes, 'XNEWPAK', this%origin)
-    call mem_allocate(this%xoldpak, this%nlakes, 'XOLDPAK', this%origin)
+    call mem_allocate(this%iboundpak, this%nlakes, 'IBOUND', this%memoryPath)
+    call mem_allocate(this%xnewpak, this%nlakes, 'XNEWPAK', this%memoryPath)
+    call mem_allocate(this%xoldpak, this%nlakes, 'XOLDPAK', this%memoryPath)
     !
     ! -- lake iteration variables
-    call mem_allocate(this%iseepc, this%nlakes, 'ISEEPC', this%origin)
-    call mem_allocate(this%idhc, this%nlakes, 'IDHC', this%origin)
-    call mem_allocate(this%en1, this%nlakes, 'EN1', this%origin)
-    call mem_allocate(this%en2, this%nlakes, 'EN2', this%origin)
-    call mem_allocate(this%r1, this%nlakes, 'R1', this%origin)
-    call mem_allocate(this%r2, this%nlakes, 'R2', this%origin)
-    call mem_allocate(this%dh0, this%nlakes, 'DH0', this%origin)
-    call mem_allocate(this%s0, this%nlakes, 'S0', this%origin)
-    call mem_allocate(this%qgwf0, this%nlakes, 'QGWF0', this%origin)
+    call mem_allocate(this%iseepc, this%nlakes, 'ISEEPC', this%memoryPath)
+    call mem_allocate(this%idhc, this%nlakes, 'IDHC', this%memoryPath)
+    call mem_allocate(this%en1, this%nlakes, 'EN1', this%memoryPath)
+    call mem_allocate(this%en2, this%nlakes, 'EN2', this%memoryPath)
+    call mem_allocate(this%r1, this%nlakes, 'R1', this%memoryPath)
+    call mem_allocate(this%r2, this%nlakes, 'R2', this%memoryPath)
+    call mem_allocate(this%dh0, this%nlakes, 'DH0', this%memoryPath)
+    call mem_allocate(this%s0, this%nlakes, 'S0', this%memoryPath)
+    call mem_allocate(this%qgwf0, this%nlakes, 'QGWF0', this%memoryPath)
     !
     ! -- allocate character storage not managed by the memory manager
     allocate(this%lakename(this%nlakes)) ! ditch after boundnames allocated??
@@ -621,7 +621,7 @@ contains
           text = caux(jj)
           ii = n
           bndElem => this%lauxvar(jj, ii)
-          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%name,   &
+          call read_value_or_time_series_adv(text, ii, jj, bndElem, this%packName,   &
                                              'AUX', this%tsManager, this%iprpak, &
                                              this%auxname(jj))
         end do
@@ -687,7 +687,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword, cellid
     integer(I4B) :: ierr, ival
     logical :: isfound, endOfBlock
@@ -717,20 +716,20 @@ contains
     if (isfound) then
 
       ! -- allocate connection data using memory manager
-      call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%origin)
-      call mem_allocate(this%cellid, this%MAXBOUND, 'CELLID', this%origin)
-      call mem_allocate(this%nodesontop, this%MAXBOUND, 'NODESONTOP', this%origin)
-      call mem_allocate(this%ictype, this%MAXBOUND, 'ICTYPE', this%origin)
-      call mem_allocate(this%bedleak, this%MAXBOUND, 'BEDLEAK', this%origin) ! don't need to save this - use a temporary vector
-      call mem_allocate(this%belev, this%MAXBOUND, 'BELEV', this%origin)
-      call mem_allocate(this%telev, this%MAXBOUND, 'TELEV', this%origin)
-      call mem_allocate(this%connlength, this%MAXBOUND, 'CONNLENGTH', this%origin)
-      call mem_allocate(this%connwidth, this%MAXBOUND, 'CONNWIDTH', this%origin)
-      call mem_allocate(this%sarea, this%MAXBOUND, 'SAREA', this%origin)
-      call mem_allocate(this%warea, this%MAXBOUND, 'WAREA', this%origin)
-      call mem_allocate(this%satcond, this%MAXBOUND, 'SATCOND', this%origin)
-      call mem_allocate(this%simcond, this%MAXBOUND, 'SIMCOND', this%origin)
-      call mem_allocate(this%simlakgw, this%MAXBOUND, 'SIMLAKGW', this%origin)
+      call mem_allocate(this%imap, this%MAXBOUND, 'IMAP', this%memoryPath)
+      call mem_allocate(this%cellid, this%MAXBOUND, 'CELLID', this%memoryPath)
+      call mem_allocate(this%nodesontop, this%MAXBOUND, 'NODESONTOP', this%memoryPath)
+      call mem_allocate(this%ictype, this%MAXBOUND, 'ICTYPE', this%memoryPath)
+      call mem_allocate(this%bedleak, this%MAXBOUND, 'BEDLEAK', this%memoryPath) ! don't need to save this - use a temporary vector
+      call mem_allocate(this%belev, this%MAXBOUND, 'BELEV', this%memoryPath)
+      call mem_allocate(this%telev, this%MAXBOUND, 'TELEV', this%memoryPath)
+      call mem_allocate(this%connlength, this%MAXBOUND, 'CONNLENGTH', this%memoryPath)
+      call mem_allocate(this%connwidth, this%MAXBOUND, 'CONNWIDTH', this%memoryPath)
+      call mem_allocate(this%sarea, this%MAXBOUND, 'SAREA', this%memoryPath)
+      call mem_allocate(this%warea, this%MAXBOUND, 'WAREA', this%memoryPath)
+      call mem_allocate(this%satcond, this%MAXBOUND, 'SATCOND', this%memoryPath)
+      call mem_allocate(this%simcond, this%MAXBOUND, 'SIMCOND', this%memoryPath)
+      call mem_allocate(this%simlakgw, this%MAXBOUND, 'SIMLAKGW', this%memoryPath)
       
 
       ! -- process the lake connection data
@@ -989,7 +988,7 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: line, errmsg
+    character(len=LINELENGTH) :: line
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1111,7 +1110,6 @@ contains
     character (len=*), intent(in) :: filename
 
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     character(len=13) :: arrName
     character(len=4) :: citem
@@ -1217,15 +1215,15 @@ contains
       write(citem,'(i4.4)') ilak
       ! -- build arrName for outlet
       arrName = 'TABSTAGE' // citem
-      call mem_allocate(this%laketables(ilak)%tabstage, n, arrName, this%origin)
+      call mem_allocate(this%laketables(ilak)%tabstage, n, arrName, this%memoryPath)
       arrName = 'TABVOLUME' // citem
-      call mem_allocate(this%laketables(ilak)%tabvolume, n, arrName, this%origin)
+      call mem_allocate(this%laketables(ilak)%tabvolume, n, arrName, this%memoryPath)
       arrName = 'TABSAREA' // citem
-      call mem_allocate(this%laketables(ilak)%tabsarea, n, arrName, this%origin)
+      call mem_allocate(this%laketables(ilak)%tabsarea, n, arrName, this%memoryPath)
       ipos = this%idxlakeconn(ilak)
       if (this%ictype(ipos) == 2 .or. this%ictype(ipos) == 3) then
         arrName = 'tabwarea' // citem
-        call mem_allocate(this%laketables(ilak)%tabwarea, n, arrName, this%origin)
+        call mem_allocate(this%laketables(ilak)%tabwarea, n, arrName, this%memoryPath)
       end if
 
 
@@ -1364,7 +1362,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: text, keyword
     character(len=LENBOUNDNAME) :: bndName
     character(len=9) :: citem
@@ -1395,17 +1392,17 @@ contains
         end do
         !
         ! -- allocate outlet data using memory manager
-        call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%origin)
-        call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%origin)
-        call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%origin)
-        call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%origin)
+        call mem_allocate(this%lakein, this%NOUTLETS, 'LAKEIN', this%memoryPath)
+        call mem_allocate(this%lakeout, this%NOUTLETS, 'LAKEOUT', this%memoryPath)
+        call mem_allocate(this%iouttype, this%NOUTLETS, 'IOUTTYPE', this%memoryPath)
+        call mem_allocate(this%outrate, this%NOUTLETS, 'OUTRATE', this%memoryPath)
         call mem_allocate(this%outinvert, this%NOUTLETS, 'OUTINVERT',           &
-                          this%origin)
-        call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%origin)
-        call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%origin)
-        call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%origin)
+                          this%memoryPath)
+        call mem_allocate(this%outwidth, this%NOUTLETS, 'OUTWIDTH', this%memoryPath)
+        call mem_allocate(this%outrough, this%NOUTLETS, 'OUTROUGH', this%memoryPath)
+        call mem_allocate(this%outslope, this%NOUTLETS, 'OUTSLOPE', this%memoryPath)
         call mem_allocate(this%simoutrate, this%NOUTLETS, 'SIMOUTRATE',         &
-                          this%origin)
+                          this%memoryPath)
         !
         ! -- initialize outlet rate
         do n = 1, this%noutlets
@@ -1476,28 +1473,28 @@ contains
           ! -- outlet invert
           call this%parser%GetString(text)
           bndElem => this%outinvert(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,    &
                                              'BND', this%tsManager, this%iprpak, &
                                              'INVERT')
           !
           ! -- outlet width
           call this%parser%GetString(text)
           bndElem => this%outwidth(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,    &
                                              'BND', this%tsManager, this%iprpak, &
                                              'WIDTH')
           !
           ! -- outlet roughness
           call this%parser%GetString(text)
           bndElem => this%outrough(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,    &
                                              'BND', this%tsManager, this%iprpak, &
                                              'ROUGH')
           !
           ! -- outlet slope
           call this%parser%GetString(text)
           bndElem => this%outslope(n)
-          call read_value_or_time_series_adv(text, n, jj, bndElem, this%name,    &
+          call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName,    &
                                              'BND', this%tsManager, this%iprpak, &
                                              'SLOPE')
         end do readoutlet
@@ -1554,7 +1551,6 @@ contains
     ! -- dummy
     class(LakType),intent(inout) :: this
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     character(len=LINELENGTH) :: keyword
     integer(I4B) :: ierr
     logical :: isfound, endOfBlock
@@ -1646,6 +1642,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     use ConstantsModule, only: LINELENGTH
+    use MemoryHelperModule, only: create_mem_path
     use SimModule, only: ustop, store_error, count_errors
     use TimeSeriesManagerModule, only: read_value_or_time_series_adv
     ! -- dummy
@@ -1689,7 +1686,7 @@ contains
       write(text,'(g15.7)') this%strt(n)
       jj = 1    ! For STAGE
       bndElem => this%stage(n)
-      call read_value_or_time_series_adv(text, n, jj, bndElem, this%name, 'BND', &
+      call read_value_or_time_series_adv(text, n, jj, bndElem, this%packName, 'BND', &
                                          this%tsManager, this%iprpak,            &
                                          'STAGE')
     end do
@@ -1715,11 +1712,11 @@ contains
     endif
     !
     ! -- set pointer to gwf iss and gwf hk
-    call mem_setptr(this%gwfiss, 'ISS', trim(this%name_model))
-    call mem_setptr(this%gwfk11, 'K11', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfk33, 'K33', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfik33, 'IK33', trim(this%name_model)//' NPF')
-    call mem_setptr(this%gwfsat, 'SAT', trim(this%name_model)//' NPF')
+    call mem_setptr(this%gwfiss, 'ISS', create_mem_path(this%name_model))
+    call mem_setptr(this%gwfk11, 'K11', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfk33, 'K33', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfik33, 'IK33', create_mem_path(this%name_model, 'NPF'))
+    call mem_setptr(this%gwfsat, 'SAT', create_mem_path(this%name_model, 'NPF'))
     !
     ! -- allocate temporary storage
     allocate(clb(this%MAXBOUND))
@@ -2996,7 +2993,6 @@ contains
     class(LakType),intent(inout) :: this
     integer(I4B), intent(in) :: itemno
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ival
     ! -- formats
 ! ------------------------------------------------------------------------------
@@ -3038,7 +3034,6 @@ contains
     character(len=LINELENGTH) :: text
     character(len=LINELENGTH) :: caux
     character(len=LINELENGTH) :: keyword
-    character(len=LINELENGTH) :: errmsg
     integer(I4B) :: ierr
     integer(I4B) :: ii
     integer(I4B) :: jj
@@ -3075,7 +3070,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For STAGE
         bndElem => this%stage(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'STAGE')
       case ('RAINFALL')
@@ -3086,7 +3081,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For RAINFALL
         bndElem => this%rainfall(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RAINFALL')
         if (this%rainfall(itemno) < DZERO) then
@@ -3103,7 +3098,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For EVAPORATION
         bndElem => this%evaporation(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'EVAPORATION')
         if (this%evaporation(itemno) < DZERO) then
@@ -3120,7 +3115,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For RUNOFF
         bndElem => this%runoff(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RUNOFF')
         if (this%runoff(itemno) < DZERO) then
@@ -3137,7 +3132,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For specified INFLOW
         bndElem => this%inflow(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INFLOW')
         if (this%inflow(itemno) < DZERO) then
@@ -3154,7 +3149,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For specified WITHDRAWAL
         bndElem => this%withdrawal(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'WITHDRAWL')
         if (this%withdrawal(itemno) < DZERO) then
@@ -3171,7 +3166,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For specified OUTLET RATE
         bndElem => this%outrate(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'RATE')
       case ('INVERT')
@@ -3182,7 +3177,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For OUTLET INVERT
         bndElem => this%outinvert(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'INVERT')
       case ('WIDTH')
@@ -3193,7 +3188,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For OUTLET WIDTH
         bndElem => this%outwidth(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'WIDTH')
       case ('ROUGH')
@@ -3204,7 +3199,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For OUTLET ROUGHNESS
         bndElem => this%outrough(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'ROUGH')
       case ('SLOPE')
@@ -3215,7 +3210,7 @@ contains
         call this%parser%GetString(text)
         jj = 1    ! For OUTLET SLOPE
         bndElem => this%outslope(itemno)
-        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%name, &
+        call read_value_or_time_series_adv(text, itemno, jj, bndElem, this%packName, &
                                            'BND', this%tsManager, this%iprpak,   &
                                            'SLOPE')
       case ('AUXILIARY')
@@ -3230,7 +3225,7 @@ contains
           ii = itemno
           bndElem => this%lauxvar(jj, ii)
           call read_value_or_time_series_adv(text, itemno, jj, bndElem,          &
-                                             this%name, 'AUX', this%tsManager,   &
+                                             this%packName, 'AUX', this%tsManager,   &
                                              this%iprpak, this%auxname(jj))
           exit
         end do
@@ -3261,7 +3256,6 @@ contains
     character (len=*), intent(in) :: keyword
     character (len=*), intent(in) :: msg
     ! -- local
-    character(len=LINELENGTH) :: errmsg
     ! -- formats
 ! ------------------------------------------------------------------------------
     if (len(msg) == 0) then
@@ -3447,7 +3441,7 @@ contains
     ! -- setup pakmvrobj
     if (this%imover /= 0) then
       allocate(this%pakmvrobj)
-      call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%origin)
+      call this%pakmvrobj%ar(this%noutlets, this%nlakes, this%memoryPath)
     endif
     !
     ! -- return
@@ -3472,7 +3466,6 @@ contains
     ! -- local
     character(len=LINELENGTH) :: title
     character(len=LINELENGTH) :: line
-    character(len=LINELENGTH) :: errmsg
     logical :: isfound
     logical :: endOfBlock
     integer(I4B) :: ierr
@@ -3528,9 +3521,9 @@ contains
         !
         ! -- reset the input table object
         title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-                trim(adjustl(this%name)) //') DATA FOR PERIOD'
+                trim(adjustl(this%packName)) //') DATA FOR PERIOD'
         write(title, '(a,1x,i6)') trim(adjustl(title)), kper
-        call table_cr(this%inputtab, this%name, title)
+        call table_cr(this%inputtab, this%packName, title)
         call this%inputtab%table_df(1, 4, this%iout, finalize=.FALSE.)
         text = 'NUMBER'
         call this%inputtab%initialize_column(text, 10, alignment=TABCENTER)
@@ -3946,7 +3939,7 @@ contains
         end if
         !
         ! -- setup table
-        call table_cr(this%pakcsvtab, this%name, '')
+        call table_cr(this%pakcsvtab, this%packName, '')
         call this%pakcsvtab%table_df(ntabrows, ntabcols, this%ipakcsv,           &
                                      lineseparator=.FALSE., separator=',',       &
                                      finalize=.FALSE.)
@@ -4043,14 +4036,14 @@ contains
         ipak = locdhmax
         dpak = dhmax
         write(cloc, "(a,'-',a)")                                        &
-          trim(this%name), 'stage'
+          trim(this%packName), 'stage'
         cpak = trim(cloc)
       end if
       if (ABS(dgwfmax) > abs(dpak)) then
         ipak = locdgwfmax
         dpak = dgwfmax
         write(cloc, "(a,'-',a)")                                        &
-          trim(this%name), 'gwf'
+          trim(this%packName), 'gwf'
         cpak = trim(cloc)
       end if
       if (this%noutlets > 0) then
@@ -4058,7 +4051,7 @@ contains
           ipak = locdqoutmax
           dpak = dqoutmax
           write(cloc, "(a,'-',a)")                                       &
-          trim(this%name), 'outlet'
+          trim(this%packName), 'outlet'
           cpak = trim(cloc)
         end if
       end if
@@ -4721,9 +4714,15 @@ contains
     ! -- dummy
     class(LakType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, igwfnode, j, jj, n, nn
-    real(DP) :: hgwf, hlak, v, v2
-    character(len=100) :: errmsg
+    integer(I4B) :: i
+    integer(I4B) :: igwfnode
+    integer(I4B) :: j
+    integer(I4B) :: jj
+    integer(I4B) :: n
+    real(DP) :: hgwf
+    real(DP) :: hlak
+    real(DP) :: v
+    real(DP) :: v2
     type(ObserveType), pointer :: obsrv => null()
     !---------------------------------------------------------------------------
     !
@@ -4732,8 +4731,7 @@ contains
       call this%obs%obs_bd_clear()
       do i = 1, this%obs%npakobs
         obsrv => this%obs%pakobs(i)%obsrv
-        nn = size(obsrv%indxbnds)
-        do j = 1, nn
+        do j = 1, obsrv%indxbnds_count
           v = DNODATA
           jj = obsrv%indxbnds(j)
           select case (obsrv%ObsTypeId)
@@ -4839,7 +4837,6 @@ contains
               n = this%imap(jj)
               if (this%iboundpak(n) /= 0) then
                 hlak = this%xnewpak(n)
-                nn = size(obsrv%indxbnds)
                 igwfnode = this%cellid(jj)
                 hgwf = this%xnew(igwfnode)
                 call this%lak_calculate_conn_warea(n, jj, hlak, hgwf, v)
@@ -4848,7 +4845,6 @@ contains
               n = this%imap(jj)
               if (this%iboundpak(n) /= 0) then
                 hlak = this%xnewpak(n)
-                nn = size(obsrv%indxbnds)
                 igwfnode = this%cellid(jj)
                 hgwf = this%xnew(igwfnode)
                 call this%lak_calculate_conn_conductance(n, jj, hlak, hgwf, v)
@@ -4856,11 +4852,15 @@ contains
             case default
               errmsg = 'Unrecognized observation type: ' // trim(obsrv%ObsTypeId)
               call store_error(errmsg)
-              call ustop()
           end select
           call this%obs%SaveOneSimval(obsrv, v)
         end do
       end do
+      !
+      ! -- write summary of error messages
+      if (count_errors() > 0) then
+        call ustop()
+      end if
     end if
     !
     return
@@ -4868,12 +4868,15 @@ contains
 
 
   subroutine lak_rp_obs(this)
+    use TdisModule, only: kper
     ! -- dummy
     class(LakType), intent(inout) :: this
     ! -- local
-    integer(I4B) :: i, j, n, nn1, nn2
+    integer(I4B) :: i
+    integer(I4B) :: j
+    integer(I4B) :: nn1
+    integer(I4B) :: nn2
     integer(I4B) :: jj
-    character(len=LINELENGTH) :: errmsg
     character(len=LENBOUNDNAME) :: bname
     logical :: jfound
     class(ObserveType),   pointer :: obsrv => null()
@@ -4882,139 +4885,130 @@ contains
 10  format('Boundary "',a,'" for observation "',a,                               &
            '" is invalid in package "',a,'"')
     !
-    do i = 1, this%obs%npakobs
-      obsrv => this%obs%pakobs(i)%obsrv
-      !
-      ! -- indxbnds needs to be deallocated and reallocated (using
-      !    ExpandArray) each stress period because list of boundaries
-      !    can change each stress period.
-      if (allocated(obsrv%indxbnds)) then
-        deallocate(obsrv%indxbnds)
-      end if
-      !
-      ! -- get node number 1
-      nn1 = obsrv%NodeNumber
-      if (nn1 == NAMEDBOUNDFLAG) then
-        bname = obsrv%FeatureName
-        if (bname /= '') then
-          ! -- Observation lake is based on a boundary name.
-          !    Iterate through all lakes to identify and store
-          !    corresponding index in bound array.
-          jfound = .false.
-          if (obsrv%ObsTypeId=='LAK' .or.                                        &
-              obsrv%ObsTypeId=='CONDUCTANCE' .or.                                &
-              obsrv%ObsTypeId=='WETTED-AREA') then
-            do j = 1, this%nlakes
-              do jj = this%idxlakeconn(j), this%idxlakeconn(j+1) - 1
-                if (this%boundname(jj) == bname) then
+    ! -- process each package observation
+    !    only done the first stress period since boundaries are fixed
+    !    for the simulation
+    if (kper == 1) then
+      do i = 1, this%obs%npakobs
+        obsrv => this%obs%pakobs(i)%obsrv
+        !
+        ! -- get node number 1
+        nn1 = obsrv%NodeNumber
+        if (nn1 == NAMEDBOUNDFLAG) then
+          bname = obsrv%FeatureName
+          if (bname /= '') then
+            ! -- Observation lake is based on a boundary name.
+            !    Iterate through all lakes to identify and store
+            !    corresponding index in bound array.
+            jfound = .false.
+            if (obsrv%ObsTypeId=='LAK' .or.                                      &
+                obsrv%ObsTypeId=='CONDUCTANCE' .or.                              &
+                obsrv%ObsTypeId=='WETTED-AREA') then
+              do j = 1, this%nlakes
+                do jj = this%idxlakeconn(j), this%idxlakeconn(j+1) - 1
+                  if (this%boundname(jj) == bname) then
+                    jfound = .true.
+                    call obsrv%AddObsIndex(jj)
+                  end if
+                end do
+              end do
+            else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                         &
+                     obsrv%ObsTypeId=='TO-MVR' .or.                              &
+                     obsrv%ObsTypeId=='OUTLET') then
+              do j = 1, this%noutlets
+                jj = this%lakein(j)
+                if (this%lakename(jj) == bname) then
                   jfound = .true.
-                  call ExpandArray(obsrv%indxbnds)
-                  n = size(obsrv%indxbnds)
-                  obsrv%indxbnds(n) = jj
+                  call obsrv%AddObsIndex(j)
                 end if
               end do
-            end do
-          else if (obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                           &
-                   obsrv%ObsTypeId=='TO-MVR' .or.                                &
-                   obsrv%ObsTypeId=='OUTLET') then
-            do j = 1, this%noutlets
-              jj = this%lakein(j)
-              if (this%lakename(jj) == bname) then
-                jfound = .true.
-                call ExpandArray(obsrv%indxbnds)
-                n = size(obsrv%indxbnds)
-                obsrv%indxbnds(n) = j
-              end if
-            end do
-          else
-            do j = 1, this%nlakes
-              if (this%lakename(j) == bname) then
-                jfound = .true.
-                call ExpandArray(obsrv%indxbnds)
-                n = size(obsrv%indxbnds)
-                obsrv%indxbnds(n) = j
-              end if
-            end do
-          end if
-          if (.not. jfound) then
-            write(errmsg,10)trim(bname), trim(obsrv%Name), trim(this%name)
-            call store_error(errmsg)
-          end if
-        end if
-      else
-        call ExpandArray(obsrv%indxbnds)
-        n = size(obsrv%indxbnds)
-        if (n == 1) then
-          if (obsrv%ObsTypeId=='LAK' .or.                                        &
-               obsrv%ObsTypeId=='CONDUCTANCE' .or.                               &
-               obsrv%ObsTypeId=='WETTED-AREA') then
-            nn2 = obsrv%NodeNumber2
-            j = this%idxlakeconn(nn1) + nn2 - 1
-            obsrv%indxbnds(1) = j
-          else
-            obsrv%indxbnds(1) = nn1
+            else
+              do j = 1, this%nlakes
+                if (this%lakename(j) == bname) then
+                  jfound = .true.
+                  call obsrv%AddObsIndex(j)
+                end if
+              end do
+            end if
+            if (.not. jfound) then
+              write(errmsg,10)trim(bname), trim(obsrv%Name), trim(this%packName)
+              call store_error(errmsg)
+            end if
           end if
         else
-          errmsg = 'Programming error in lak_rp_obs'
-          call store_error(errmsg)
-        endif
-      end if
-      !
-      ! -- catch non-cumulative observation assigned to observation defined
-      !    by a boundname that is assigned to more than one element
-      if (obsrv%ObsTypeId == 'STAGE') then
-        n = size(obsrv%indxbnds)
-        if (n > 1) then
-          write(errmsg, '(a,3(1x,a))')                                           &
-            trim(adjustl(obsrv%ObsTypeId)),                                      &
-            'for observation', trim(adjustl(obsrv%Name)),                        &
-            ' must be assigned to a lake with a unique boundname.'
-          call store_error(errmsg)
+          if (obsrv%indxbnds_count == 0) then
+            if (obsrv%ObsTypeId=='LAK' .or.                                      &
+                 obsrv%ObsTypeId=='CONDUCTANCE' .or.                             &
+                 obsrv%ObsTypeId=='WETTED-AREA') then
+              nn2 = obsrv%NodeNumber2
+              j = this%idxlakeconn(nn1) + nn2 - 1
+              call obsrv%AddObsIndex(j)
+            else
+              call obsrv%AddObsIndex(nn1)
+            end if
+          else
+            errmsg = 'Programming error in lak_rp_obs'
+            call store_error(errmsg)
+          endif
         end if
-      end if
+        !
+        ! -- catch non-cumulative observation assigned to observation defined
+        !    by a boundname that is assigned to more than one element
+        if (obsrv%ObsTypeId == 'STAGE') then
+          if (obsrv%indxbnds_count > 1) then
+            write(errmsg, '(a,3(1x,a))')                                         &
+              trim(adjustl(obsrv%ObsTypeId)),                                    &
+              'for observation', trim(adjustl(obsrv%Name)),                      &
+              ' must be assigned to a lake with a unique boundname.'
+            call store_error(errmsg)
+          end if
+        end if
+        !
+        ! -- check that index values are valid
+        if (obsrv%ObsTypeId=='TO-MVR' .or.                                       &
+            obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                                  &
+            obsrv%ObsTypeId=='OUTLET') then
+          do j = 1, obsrv%indxbnds_count
+            nn1 =  obsrv%indxbnds(j)
+            if (nn1 < 1 .or. nn1 > this%noutlets) then
+              write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                       &
+                trim(adjustl(obsrv%ObsTypeId)),                                  &
+                ' outlet must be > 0 and <=', this%noutlets,                     &
+                '(specified value is ', nn1, ')'
+              call store_error(errmsg)
+            end if
+          end do
+        else if (obsrv%ObsTypeId=='LAK' .or.                                     &
+                 obsrv%ObsTypeId=='CONDUCTANCE' .or.                             &
+                 obsrv%ObsTypeId=='WETTED-AREA') then
+          do j = 1, obsrv%indxbnds_count
+            nn1 =  obsrv%indxbnds(j)
+            if (nn1 < 1 .or. nn1 > this%maxbound) then
+              write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                       &
+                trim(adjustl(obsrv%ObsTypeId)),                                  &
+                'lake connection number must be > 0 and <=', this%maxbound,      &
+                '(specified value is ', nn1, ')'
+              call store_error(errmsg)
+            end if
+          end do
+        else
+          do j = 1, obsrv%indxbnds_count
+            nn1 =  obsrv%indxbnds(j)
+            if (nn1 < 1 .or. nn1 > this%nlakes) then
+              write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                       &
+                trim(adjustl(obsrv%ObsTypeId)),                                  &
+                ' lake must be > 0 and <=', this%nlakes,                         &
+                '(specified value is ', nn1, ')'
+              call store_error(errmsg)
+            end if
+          end do
+        end if
+      end do
       !
-      ! -- check that index values are valid
-      if (obsrv%ObsTypeId=='TO-MVR' .or.                                         &
-          obsrv%ObsTypeId=='EXT-OUTFLOW' .or.                                    &
-          obsrv%ObsTypeId=='OUTLET') then
-        do j = 1, size(obsrv%indxbnds)
-          nn1 =  obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%noutlets) then
-            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              ' outlet must be > 0 and <=', this%noutlets,                       &
-              '(specified value is ', nn1, ')'
-            call store_error(errmsg)
-          end if
-        end do
-      else if (obsrv%ObsTypeId=='LAK' .or.                                       &
-               obsrv%ObsTypeId=='CONDUCTANCE' .or.                               &
-               obsrv%ObsTypeId=='WETTED-AREA') then
-        do j = 1, size(obsrv%indxbnds)
-          nn1 =  obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%maxbound) then
-            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              'lake connection number must be > 0 and <=', this%maxbound,        &
-              '(specified value is ', nn1, ')'
-            call store_error(errmsg)
-          end if
-        end do
-      else
-        do j = 1, size(obsrv%indxbnds)
-          nn1 =  obsrv%indxbnds(j)
-          if (nn1 < 1 .or. nn1 > this%nlakes) then
-            write(errmsg, '(a,1x,a,1x,i0,1x,a,1x,i0,a)')                         &
-              trim(adjustl(obsrv%ObsTypeId)),                                    &
-              ' lake must be > 0 and <=', this%nlakes,                           &
-              '(specified value is ', nn1, ')'
-            call store_error(errmsg)
-          end if
-        end do
+      ! -- evaluate if there are any observation errors
+      if (count_errors() > 0) then
+        call ustop()
       end if
-    end do
-    if (count_errors() > 0) then
-      call ustop()
     end if
     !
     return
@@ -5764,7 +5758,7 @@ contains
     if (this%naux > 0) nbudterm = nbudterm + 1
     !
     ! -- set up budobj
-    call budgetobject_cr(this%budobj, this%name)
+    call budgetobject_cr(this%budobj, this%packName)
     call this%budobj%budgetobject_df(this%nlakes, nbudterm, 0, 0)
     idx = 0
     !
@@ -5776,9 +5770,9 @@ contains
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
       !
@@ -5803,7 +5797,7 @@ contains
     auxtxt(1) = '       FLOW-AREA'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
                                              this%name_model, &
                                              maxlist, .false., .true., &
@@ -5824,9 +5818,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5837,9 +5831,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5850,9 +5844,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5863,9 +5857,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5876,9 +5870,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5889,9 +5883,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5903,9 +5897,9 @@ contains
     auxtxt(1) = '          VOLUME'
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux, auxtxt)
     !
@@ -5916,9 +5910,9 @@ contains
     naux = 0
     call this%budobj%budterm(idx)%initialize(text, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              this%name_model, &
-                                             this%name, &
+                                             this%packName, &
                                              maxlist, .false., .false., &
                                              naux)
     !
@@ -5932,9 +5926,9 @@ contains
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux)
       !
@@ -5945,9 +5939,9 @@ contains
       naux = 0
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, ordered_id1=.false.)
     end if
@@ -5962,9 +5956,9 @@ contains
       maxlist = this%nlakes
       call this%budobj%budterm(idx)%initialize(text, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                this%name_model, &
-                                               this%name, &
+                                               this%packName, &
                                                maxlist, .false., .false., &
                                                naux, this%auxname)
     end if
@@ -6212,10 +6206,10 @@ contains
       !
       ! -- set up table title
       title = trim(adjustl(this%text)) // ' PACKAGE (' //                        &
-              trim(adjustl(this%name)) //') STAGES FOR EACH CONTROL VOLUME'
+              trim(adjustl(this%packName)) //') STAGES FOR EACH CONTROL VOLUME'
       !
       ! -- set up stage tableobj
-      call table_cr(this%stagetab, this%name, title)
+      call table_cr(this%stagetab, this%packName, title)
       call this%stagetab%table_df(this%nlakes, nterms, this%iout,                &
                                   transient=.TRUE.)
       !
@@ -6267,14 +6261,14 @@ contains
     ! -- Set idense and reallocate denseterms to be of size MAXBOUND
     this%idense = 1
     call mem_reallocate(this%denseterms, 3, this%MAXBOUND, 'DENSETERMS', &
-                        this%origin)
+                        this%memoryPath)
     do i = 1, this%maxbound
       do j = 1, 3
         this%denseterms(j, i) = DZERO
       end do
     end do
     write(this%iout,'(/1x,a)') 'DENSITY TERMS HAVE BEEN ACTIVATED FOR LAKE &
-      &PACKAGE: ' // trim(adjustl(this%name))
+      &PACKAGE: ' // trim(adjustl(this%packName))
     !
     ! -- return
     return

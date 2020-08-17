@@ -59,6 +59,7 @@ module GwfGwtExchangeModule
     exchange%id = id
     write(cint, '(i0)') id
     exchange%name = 'GWF-GWT_' // trim(adjustl(cint))
+    exchange%memoryPath = exchange%name
     !
     ! -- allocate scalars
     call exchange%allocate_scalars()
@@ -117,8 +118,8 @@ module GwfGwtExchangeModule
     ! -- Assign values in the fmi package
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
-      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%name)
-      gwtmodel%fmi%flowpacknamearray(ip) = packobj%name
+      call gwtmodel%fmi%gwfpackages(ip)%set_name(packobj%packName)
+      gwtmodel%fmi%flowpacknamearray(ip) = packobj%packName
     end do
     !
     ! -- return
@@ -160,6 +161,10 @@ module GwfGwtExchangeModule
     !
     ! -- Set pointer to flowja
     gwtmodel%fmi%gwfflowja => gwfmodel%flowja
+    !
+    ! -- Set the npf flag so that specific discharge is always calculated and
+    !    available for transport calculations
+    gwfmodel%npf%icalcspdis = 1
     !
     ! -- Set the auxiliary names for gwf flow packages in gwt%fmi
     ngwfpack = gwfmodel%bndlist%Count()
@@ -277,8 +282,8 @@ module GwfGwtExchangeModule
     ! -- local
 ! ------------------------------------------------------------------------------
     !
-    call mem_allocate(this%m1id, 'M1ID', this%name)
-    call mem_allocate(this%m2id, 'M2ID', this%name)
+    call mem_allocate(this%m1id, 'M1ID', this%memoryPath)
+    call mem_allocate(this%m2id, 'M2ID', this%memoryPath)
     this%m1id = 0
     this%m2id = 0
     !
@@ -323,7 +328,7 @@ module GwfGwtExchangeModule
     do ip = 1, ngwfpack
       packobj => GetBndFromList(gwfmodel%bndlist, ip)
       call gwtmodel%fmi%gwfpackages(ip)%set_pointers( &
-                           packobj%name, &
+                           packobj%packName, &
                            packobj%auxname, &
                            packobj%nbound, &
                            packobj%naux, &
