@@ -24,8 +24,6 @@ module VKDModule
     integer(I4B), pointer                           :: implicit     => null()   ! exclude implicit nodes for testing
     integer(I4B), pointer                           :: numvkd       => null()   ! number of cells with VKD active
     integer(I4B), pointer                           :: numelevs     => null()   ! number of VKD knots
-    !integer(I4B), pointer                           :: inUnitVkd    => null()   ! vkd input file unit number
-    !integer(I4B), pointer                           :: inunit       => null()   ! vkd input file unit number
     real(DP), dimension(:,:), pointer, contiguous   :: kk           => null()   ! k knots
     real(DP), dimension(:,:), pointer, contiguous   :: ek           => null()   ! elevation knots
     real(DP), dimension(:), pointer, contiguous     :: pt           => null()   ! tmp pointer
@@ -47,7 +45,6 @@ module VKDModule
     type (VKDCellType), dimension(:), pointer, contiguous :: cells => null()                    ! VKD cell data
 
   contains
-    !final :: vkd_da
     procedure :: vkd_ar
     procedure :: vkd_hcond
     procedure :: read_data
@@ -63,8 +60,6 @@ module VKDModule
     integer(I4B), pointer :: igwfnode => null()
     real(DP), dimension(:), pointer, contiguous :: ek => null()
     real(DP), dimension(:), pointer, contiguous :: kk => null()
-!!$    real(DP), dimension(:), pointer, contiguous :: d => null()
-!!$    real(DP), pointer :: ts => null()
     contains
   end type VKDCellType
 
@@ -83,9 +78,7 @@ contains
 !    SPECIFICATIONS:
 ! ------------------------------------------------------------------------------
     ! -- dummy
-    !type(VKDType), pointer :: pt_vkd
     type(VKDType), pointer :: vkdobj
-    !type(GwfNpfType), pointer :: npfobj
     character(len=*), intent(in) :: name_model
     integer(I4B), intent(in) :: inunit
     integer(I4B), intent(in) :: iout
@@ -93,7 +86,6 @@ contains
     !
     ! -- Create the object
     allocate(vkdobj)
-    !vkdobj => vkd
     !
     ! -- Allocate scalars
     call vkdobj%allocate_scalars()
@@ -120,7 +112,6 @@ contains
     ! -- dummy
     class(VKDType) :: this
     class(DisBaseType),pointer,intent(inout) :: dis
-    !class(GwfNpfType), pointer, intent(inout) :: npf
     integer(I4B), pointer, dimension(:), intent(inout) :: ibound
     real(DP), dimension(:), intent(in), pointer :: k11
     integer(I4B), intent(in), pointer :: ik33
@@ -133,7 +124,6 @@ contains
     integer(I4B), dimension(:), intent(in), pointer :: icelltype
     real(DP), intent(in), pointer              :: satomega
     integer(I4B), pointer, dimension(:), intent(in) :: ibvkd
-    !integer(I4B), pointer, intent(in) :: iout
     ! -- local
     ! -- formats
     character(len=*), parameter :: fmtheader =                                 &
@@ -143,7 +133,6 @@ contains
     !
     ! -- Print a message identifying the VKD module.
     !
-    !this%iout = iout
     write(this%iout, fmtheader)
     !
     ! -- Store pointers to arguments that were passed in
@@ -160,7 +149,7 @@ contains
     this%icelltype => icelltype
     this%satomega => satomega
     this%ibvkd => ibvkd
-
+    !
     ! -- Initialize block parser
     call this%parser%Initialize(this%inunit, this%iout)
     !
@@ -352,8 +341,6 @@ contains
         this%ibvkd(this%cells(n)%igwfnode) = n
         allocate(this%cells(n)%kk(this%numelevs))
         allocate(this%cells(n)%ek(this%numelevs))
-!!$        allocate(this%cells(n)%d(this%numelevs))
-!!$        allocate(this%cells(n)%ts)
         !
         ! -- get ek & kk
         if(this%implicit .eq. 0) then
@@ -389,12 +376,7 @@ contains
         if (this%iprpak /= 0) then
           write (this%iout,'(A8,20F10.3)') cellid, this%cells(n)%ek(:), this%cells(n)%kk(:)
         end if
-
-        ! set derivative for node
-        !kk = this%cells(n)%kk * this%k11(this%cells(n)%igwfnode)
-        !call sPChip_set_derivatives(this%numelevs, this%cells(n)%ek, kk, this%cells(n)%d)
-        ! get saturated t at node n
-        !this%cells(n)%ts = sPChip_integrate(this%numelevs, this%cells(n)%ek, kk, this%cells(n)%d, this%dis%bot(n), this%dis%top(n))
+        !
         ! increment cell counter
         n = n + 1
       end do
@@ -454,20 +436,18 @@ contains
 
       posn = this%ibvkd(n)
       posm = this%ibvkd(m)
-      !write(*,*)posn, posm, n, m
 
       if(posn > 0) then
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
         kk = this%cells(posn)%kk * hyn !this%k11(this%cells(posn)%igwfnode)
         call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, kk, d)
-        !d = this%cells(posn)%d
+        !
         ! get t at head node n
         t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), hn)
         ! get saturated t at node n
         tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, kk, d, this%dis%bot(n), this%dis%top(n))
-        !write(*,*)tsn, satn, csat
-        !tsn = this%cells(posn)%ts
+        !
         ! get k factor at head n
         kfacn = sPChip_eval_fn(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk,d,1,1,[hn])
         ! get absolute k at head n
@@ -486,13 +466,12 @@ contains
         allocate(d(this%numelevs), kk(this%numelevs))
         ! get factored k profile from k base and vkd factors
         kk = this%cells(posm)%kk * hym !this%k11(this%cells(posm)%igwfnode)
-        !d = this%cells(posm)%d
+        !
         call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, kk, d)
         ! get t at head node m
         t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), hm)
         tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, kk, d, this%dis%bot(m), this%dis%top(m))
-        !tsm = this%cells(posm)%ts
-        !write(*,*)tsm, satm, csat
+        !
         ! get k factor at head m
         kfacm = sPChip_eval_fn(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk,d,1,1,[hm])
         ! get absolute k at head m
@@ -505,18 +484,7 @@ contains
         thksatm = satm * (topm - botm)
         km = hym
       endif
-!      if (m .eq. 2) then
-!        write(*,*)'node',m,'head',hm,'kfac',kfacm,'km',km
-!        write(*,*) 't',t2,t1
-!!$        allocate(d(this%numelevs), kk(this%numelevs))
-!!$        ! get factored k profile from k base and vkd factors
-!!$        kk = this%cells(posm)%kk * hym !this%k11(this%cells(posm)%igwfnode)
-!!$       call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk, d)
-!!$        write(*,*)sPChip_eval_fn(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk,d,1,1,[DZERO])
-!!$        !write(*,*) 'kk', kk, hym
-!!$        !write(*,*)'ek',this%cells(posm)%ek
-!      endif
-
+      !
       if (thksatn*thksatm > DZERO) then
         if (hn > hm) then
           cond = sn
@@ -525,9 +493,6 @@ contains
         end if
 
         if(inwtup == 1) then
-!!$          if (n .eq. 172187) then
-!!$            write(*,*) "inwtup", tsn, t1 !, sn, sm !inwtup, cond, csat
-!!$          endif
           cond = cond * csat
         else
           ! call condmean here - the function itself will move
@@ -537,87 +502,8 @@ contains
         cond = DZERO
       end if
 
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$!!!! condmean only harmonic as present
-!!$      if (t1*t2 > DZERO) then
-!!$        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
-!!$        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
-!!$        if (hn > hm) then
-!!$          cond = sn
-!!$        else
-!!$          cond = sm
-!!$        end if
-!!$        if(inwtup == 1) then
-!!$          cond = cond * csat
-!!$        else
-!!$          cond = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
-!!$        endif
-!!$      else
-!!$        cond = DZERO
-!!$      end if
-
-
-
-
-
-
-
-
- 
     endif
 
-!!$    if (m .eq. 2) then
-!!$      write(*,*)'cond', cond, kn * thksatn, km * thksatm, t2 !km, thksatm
-!!$      write(*,*) 'precalc d', this%cells(posn)%d
-!!$    endif
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!$        ! anisotropy hyeff ***************
-!!$    if(this%ibound(n) == 0 .or. this%ibound(m) == 0) then
-!!$      cond = DZERO
-!!$    else
-!!$
-!!$      posn = this%ibvkd(n)
-!!$      posm = this%ibvkd(m)
-!!$      !
-!!$      allocate(d(this%numelevs))
-!!$      call sPChip_set_derivatives(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d)
-!!$      t1 = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d, this%dis%bot(n), hn)
-!!$      tsn = sPChip_integrate(this%numelevs, this%cells(posn)%ek, this%cells(posn)%kk * hyn, d, this%dis%bot(n), this%dis%top(n))
-!!$      deallocate(d)
-!!$
-!!$      allocate(d(this%numelevs))
-!!$      call sPChip_set_derivatives(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d)
-!!$      t2 = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d, this%dis%bot(m), hm)
-!!$      tsm = sPChip_integrate(this%numelevs, this%cells(posm)%ek, this%cells(posm)%kk * hym, d, this%dis%bot(m), this%dis%top(m))
-!!$      deallocate(d)
-!!$!!!! condmean only harmonic as present
-!!$      if (t1*t2 > DZERO) then
-!!$        sn = sQuadraticSaturation(tsn, DZERO, t1, this%satomega)
-!!$        sm = sQuadraticSaturation(tsm, DZERO, t2, this%satomega)
-!!$        if (hn > hm) then
-!!$          cond = sn
-!!$        else
-!!$          cond = sm
-!!$        end if
-!!$        if(inwtup == 1) then
-!!$          cond = cond * csat
-!!$        else
-!!$          cond = width * t1 * t2 / (t1 * cl2 + t2 * cl1)
-!!$        endif
-!!$      else
-!!$        cond = DZERO
-!!$      end if
-!!$endif
-!!$    if (m .eq. 2) then
-!!$        write(*,*)'cond2', cond, t1, t2
-!!$    endif
-    
-!!$    if (n .eq. 172187) then
-!!$      !write(*,*) '---- ', cond, kn, km, hn, topn
-!!$      !write(*,*) "++++", satn, thksatn
-!!$      !write(*,*) "inwtup", inwtup, csat
-!!$    endif
   end function vkd_hcond
 
   function vkd_satThk(this, n, hn) result(satThk)
@@ -715,8 +601,6 @@ contains
     integer(I4B), intent(in) :: ncells, numvkd
 ! ------------------------------------------------------------------------------
     allocate(this%cells(numvkd))
-    !call mem_allocate(this%ibvkd, ncells, 'IBVKD', trim(this%origin))
-    !this%ibvkd = 0
     !
     ! -- Return
     return
@@ -738,8 +622,7 @@ contains
 ! ------------------------------------------------------------------------------
     !
     ! -- Deallocate arrays
-    !if(size(this%ibvkd) > 0) deallocate(this%ibvkd)
-
+    !
     if (size(this%cells) > 0) then
       do i = 1, this%numvkd
         deallocate(this%cells(i)%ek)
@@ -751,7 +634,6 @@ contains
     !
     ! -- Scalars
     call mem_deallocate(this%ivkd)
-    !call mem_deallocate(this%inUnitVkd)
     call mem_deallocate(this%numvkd)
     call mem_deallocate(this%numelevs)
     call mem_deallocate(this%ikk)
