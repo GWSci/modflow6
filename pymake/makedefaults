@@ -1,6 +1,6 @@
-# makedefaults created on 2020-06-23 13:07:30.030148
-# by pymake (version 1.1.0) for the 'mf6' executable 
-# using the 'ifort' fortran compiler(s).
+# makedefaults created on 2020-08-17 10:43:44.878194
+# by pymake (version 1.2.0) for the 'mf6' executable 
+# using the 'gfortran' fortran compiler(s).
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -58,14 +58,14 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace $(OS_macro)
+		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace $(OS_macro)
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		FFLAGS ?= -no-heap-arrays -fpe0 -traceback
+		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
 		MODSWITCH = -module $(MODDIR)
 	endif
 endif
@@ -73,7 +73,7 @@ endif
 # set the ldflgs
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), $(filter $(FC), gfortran))
-		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm
+		LDFLAGS ?= -static -static-libgfortran -static-libgcc -static-libstdc++ -lm -lc
 	endif
 else
 	ifeq ($(FC), gfortran)
