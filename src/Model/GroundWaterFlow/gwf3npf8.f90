@@ -145,7 +145,7 @@ module GwfNpfModule
     allocate(npfobj)
 !    allocate(npfobj%vkd)
     !
-    ! -- create name and origin
+    ! -- create name and memory path
     call npfobj%set_names(1, name_model, 'NPF', 'NPF')
     !
     ! -- Allocate scalars
