@@ -1528,8 +1528,7 @@ module GwfDisuModule
     ! -- Allocate arrays in DISU
     if(this%nodes < this%nodesuser) then
       call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
-      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
-                        this%memoryPath)
+      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED', this%memoryPath)
     else
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)
       call mem_allocate(this%nodereduced, 1, 'NODEREDUCED', this%memoryPath)

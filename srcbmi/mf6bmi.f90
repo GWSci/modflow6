@@ -20,10 +20,15 @@ module mf6bmi
   use bmif, only: BMI_FAILURE, BMI_SUCCESS
   use Mf6CoreModule
   use TdisModule, only: kper, kstp
-  use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr
-  use KindModule, only: DP, I4B
+  use iso_c_binding, only: c_int, c_char, c_double, C_NULL_CHAR, c_loc, c_ptr,   &
+                           c_f_pointer
+  use KindModule, only: DP, I4B, LGP
   use ConstantsModule, only: LENMEMPATH, LENVARNAME
-  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize, get_mem_rank, get_mem_shape, get_mem_type
+  use MemoryManagerModule, only: mem_setptr, get_mem_elem_size, get_isize,       &
+                                 get_mem_rank, get_mem_shape, get_mem_type,      &
+                                 memorylist, get_from_memorylist
+  use MemoryTypeModule, only: MemoryType
+  use MemoryHelperModule, only: create_mem_address
   use SimVariablesModule, only: simstdout, istdout
   use InputOutputModule, only: getunit
   implicit none
@@ -167,7 +172,111 @@ module mf6bmi
     bmi_status = BMI_SUCCESS
 
   end function get_time_step
+
+  !> @brief Get the number of input variables in the simulation
+  !!
+  !! This concerns all variables stored in the memory manager
+  !<
+  function get_input_item_count(count) result(bmi_status) bind(C, name="get_input_item_count")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_input_item_count
+    integer(kind=c_int), intent(out) :: count !< the number of input variables
+    integer(kind=c_int) :: bmi_status         !< BMI status code
+    ! local
+    integer(I4B) :: ipos
+    type(MemoryType), pointer :: mt => null()
+
+    count = memorylist%count()
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_input_item_count
+
+  !> @brief Get the number of output variables in the simulation
+  !!
+  !! This concerns all variables stored in the memory manager
+  !<
+  function get_output_item_count(count) result(bmi_status) bind(C, name="get_output_item_count")
+    !DEC$ ATTRIBUTES DLLEXPORT :: get_output_item_count
+      integer(kind=c_int), intent(out) :: count !< the number of output variables
+      integer(kind=c_int) :: bmi_status         !< BMI status code
+      ! local
+      integer(I4B) :: ipos
+      type(MemoryType), pointer :: mt => null()
   
+      count = memorylist%count()
+  
+      bmi_status = BMI_SUCCESS
+  
+    end function get_output_item_count
+
+  !> @brief Returns all input variables in the simulation
+  !!
+  !! This functions returns the full address for all variables in the
+  !! memory manager
+  !!
+  !! The array @p c_names should be pre-allocated of proper size:
+  !!
+  !! size = BMI_LENVARADDRESS *  get_input_item_count()
+  !!
+  !! The strings will be written contiguously with stride equal to
+  !! BMI_LENVARADDRESS and nul-terminated where the trailing spaces start:
+  !!
+  !! c_names = 'variable_address_1\x00 ... variable_address_2\x00 ... ' etc.
+  !<
+  function get_input_var_names(c_names) result(bmi_status) bind(C, name="get_input_var_names")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_input_var_names
+    character(kind=c_char,len=1), intent(inout) :: c_names(*) !< array with memory paths for input variables
+    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    ! local
+    integer(I4B) :: imem, start, i
+    type(MemoryType), pointer :: mt => null() 
+    character(len=LENMEMADDRESS) :: var_address
+
+    start = 1
+    do imem = 1, memorylist%count()
+      mt => memorylist%Get(imem)
+      var_address = create_mem_address(mt%path, mt%name)
+      do i = 1, len(trim(var_address))
+        c_names(start + i - 1) = var_address(i:i)
+      end do
+      c_names(start + i) = c_null_char
+      start = start + BMI_LENVARADDRESS
+    end do
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_input_var_names
+
+  !> @brief Returns all output variables in the simulation
+  !!
+  !! This function works analogously to get_input_var_names(),
+  !! and currently returns the same set of memory variables,
+  !! which is all of them!
+  !<
+  function get_output_var_names(c_names) result(bmi_status) bind(C, name="get_output_var_names")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_output_var_names
+    character(kind=c_char,len=1), intent(inout) :: c_names(*) !< array with memory paths for output variables
+    integer(kind=c_int) :: bmi_status                         !< BMI status code
+    ! local
+    integer(I4B) :: imem, start, i
+    type(MemoryType), pointer :: mt => null() 
+    character(len=LENMEMADDRESS) :: var_address
+
+    start = 1
+    do imem = 1, memorylist%count()
+      mt => memorylist%Get(imem)
+      var_address = create_mem_address(mt%path, mt%name)
+      do i = 1, len(trim(var_address))
+        c_names(start + i - 1) = var_address(i:i)
+      end do
+      c_names(start + i) = c_null_char
+      start = start + BMI_LENVARADDRESS
+    end do
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_output_var_names
+
 
   !> @brief Get the size (in bytes) of a single element of a variable
   !< 
@@ -212,6 +321,125 @@ module mf6bmi
     
   end function get_var_nbytes
 
+  !> @brief Copy the double precision values of a variable into the array
+  !!
+  !! The copied variable us located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to an array of the proper shape (the
+  !! BMI function get_var_shape() can be used to create it). Multi-dimensional 
+  !! arrays are supported.
+  !<
+  function get_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_double")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_double
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    real(DP), pointer :: src_ptr, tgt_ptr
+    real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+
+    bmi_status = BMI_FAILURE
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! convert pointer and copy data from memory manager into 
+    ! the passed array, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(src_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(src1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt1D_ptr, shape(src1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(src2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt2D_ptr, shape(src2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_value_double
+
+  !> @brief Copy the integer values of a variable into the array
+  !!
+  !! The copied variable us located at @p c_var_address. The caller should
+  !! provide @p c_arr_ptr pointing to an array of the proper shape (the
+  !! BMI function get_var_shape() can be used to create it). Multi-dimensional 
+  !! arrays are supported.
+  !<
+  function get_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="get_value_int")
+  !DEC$ ATTRIBUTES DLLEXPORT :: get_value_int
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    integer(I4B), pointer :: src_ptr, tgt_ptr
+    integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+
+    bmi_status = BMI_FAILURE
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! convert pointer and copy data from memory manager into 
+    ! the passed array, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(src_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(src1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt1D_ptr, shape(src1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(src2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, tgt2D_ptr, shape(src2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function get_value_int
 
   !> @brief Get a pointer to the array of double precision numbers
   !!
@@ -228,11 +456,15 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
     real(DP), pointer :: scalar_ptr
     real(DP), dimension(:), pointer, contiguous :: array_ptr
     real(DP), dimension(:,:), pointer, contiguous :: array2D_ptr
-    integer(I4B) :: rank
+    integer(I4B) :: rank    
     
+    bmi_status = BMI_FAILURE
+
     call split_address(c_var_address, mem_path, var_name)
     
     rank = -1
@@ -247,9 +479,10 @@ module mf6bmi
       call mem_setptr(array2D_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
     else
-      bmi_status = BMI_FAILURE
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       return
     end if
+
     bmi_status = BMI_SUCCESS    
     
   end function get_value_ptr_double
@@ -269,13 +502,17 @@ module mf6bmi
     ! local
     character(len=LENMEMPATH) :: mem_path
     character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
     integer(I4B) :: rank
     integer(I4B), pointer :: scalar_ptr
     integer(I4B), dimension(:), pointer, contiguous :: array_ptr
     integer(I4B), dimension(:,:), pointer, contiguous :: array2D_ptr
     
+    bmi_status = BMI_FAILURE
+
     call split_address(c_var_address, mem_path, var_name)
-    
+
     rank = -1
     call get_mem_rank(var_name, mem_path, rank)
         
@@ -289,13 +526,145 @@ module mf6bmi
       call mem_setptr(array_ptr, var_name, mem_path)
       c_arr_ptr = c_loc(array2D_ptr)
     else
-      bmi_status = BMI_FAILURE
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
       return
     end if
     
     bmi_status = BMI_SUCCESS
     
   end function get_value_ptr_int
+
+  !> @brief Set new values for a variable of type double
+  !!
+  !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2
+  !! and should have a C-style layout, which is particularly important for
+  !! rank > 1.
+  !<
+  function set_value_double(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_double")
+  !DEC$ ATTRIBUTES DLLEXPORT :: set_value_double
+    use MemorySetHandlerModule, only: on_memory_set
+    character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+    type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the double precision array
+    integer :: bmi_status                                   !< BMI status code
+    ! local
+    character(len=LENMEMPATH) :: mem_path
+    character(len=LENVARNAME) :: var_name
+    integer(I4B) :: access_type
+    logical(LGP) :: found
+    integer(I4B) :: rank
+    real(DP), pointer :: src_ptr, tgt_ptr
+    real(DP), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+    real(DP), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+    integer(I4B) :: i, j
+    integer(I4B) :: status
+
+    bmi_status = BMI_FAILURE
+
+    call split_address(c_var_address, mem_path, var_name)
+
+    ! convert pointer and copy, using loops to avoid stack overflow
+    rank = -1
+    call get_mem_rank(var_name, mem_path, rank)
+
+    if (rank == 0) then
+      call mem_setptr(tgt_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src_ptr)
+      tgt_ptr = src_ptr
+    else if (rank == 1) then
+      call mem_setptr(tgt1D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
+      do i = 1, size(tgt1D_ptr)
+        tgt1D_ptr(i) = src1D_ptr(i)
+      end do
+    else if (rank == 2) then
+      call mem_setptr(tgt2D_ptr, var_name, mem_path)
+      call c_f_pointer(c_arr_ptr, src2D_ptr, shape(tgt2D_ptr))
+      do j = 1, size(tgt2D_ptr,2)
+        do i = 1, size(tgt2D_ptr,1)
+          tgt2D_ptr(i,j) = src2D_ptr(i,j)
+        end do
+      end do
+    else
+      write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+      return
+    end if
+
+    ! trigger event:
+    call on_memory_set(var_name, mem_path, status)
+    if (status /= 0) then
+      ! something went terribly wrong here, aborting       
+      write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+      return
+    end if
+
+    bmi_status = BMI_SUCCESS
+
+  end function set_value_double
+
+  !> @brief Set new values for a variable of type integer
+  !!
+  !! The array pointed to by @p c_arr_ptr can have rank equal to 0, 1, or 2.
+  !<
+  function set_value_int(c_var_address, c_arr_ptr) result(bmi_status) bind(C, name="set_value_int")
+    !DEC$ ATTRIBUTES DLLEXPORT :: set_value_int
+      use MemorySetHandlerModule, only: on_memory_set
+      character (kind=c_char), intent(in) :: c_var_address(*) !< memory address string of the variable
+      type(c_ptr), intent(in) :: c_arr_ptr                    !< pointer to the integer array
+      integer :: bmi_status                                   !< BMI status code
+      ! local
+      character(len=LENMEMPATH) :: mem_path
+      character(len=LENVARNAME) :: var_name
+      integer(I4B) :: access_type
+      logical(LGP) :: found
+      integer(I4B) :: rank
+      integer(I4B), pointer :: src_ptr, tgt_ptr
+      integer(I4B), dimension(:), pointer, contiguous :: src1D_ptr, tgt1D_ptr
+      integer(I4B), dimension(:,:), pointer, contiguous :: src2D_ptr, tgt2D_ptr
+      integer(I4B) :: i, j
+      integer(I4B) :: status
+  
+      bmi_status = BMI_FAILURE
+  
+      call split_address(c_var_address, mem_path, var_name)
+  
+      ! convert pointer and copy, using loops to avoid stack overflow
+      rank = -1
+      call get_mem_rank(var_name, mem_path, rank)
+  
+      if (rank == 0) then
+        call mem_setptr(tgt_ptr, var_name, mem_path)
+        call c_f_pointer(c_arr_ptr, src_ptr)
+        tgt_ptr = src_ptr
+      else if (rank == 1) then
+        call mem_setptr(tgt1D_ptr, var_name, mem_path)
+        call c_f_pointer(c_arr_ptr, src1D_ptr, shape(tgt1D_ptr))
+        do i = 1, size(tgt1D_ptr)
+          tgt1D_ptr(i) = src1D_ptr(i)
+        end do
+      else if (rank == 2) then
+        call mem_setptr(tgt2D_ptr, var_name, mem_path)
+        call c_f_pointer(c_arr_ptr, src2D_ptr, shape(tgt2D_ptr))
+        do j = 1, size(tgt2D_ptr,2)
+          do i = 1, size(tgt2D_ptr,1)
+            tgt2D_ptr(i,j) = src2D_ptr(i,j)
+          end do
+        end do
+      else
+        write(istdout,*) 'BMI Error: unsupported rank for variable '//var_name
+        return
+      end if
+  
+      ! trigger event:
+      call on_memory_set(var_name, mem_path, status)
+      if (status /= 0) then
+        ! something went terribly wrong here, aborting        
+        write(istdout,*) 'Fatal BMI Error: invalid writing of memory for variable '//var_name
+        return
+      end if
+
+      bmi_status = BMI_SUCCESS
+  
+    end function set_value_int
   
   !> @brief Get the variable type as a string
   !!

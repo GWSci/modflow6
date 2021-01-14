@@ -6,7 +6,7 @@ module mf6bmiUtil
   use ConstantsModule, only: MAXCHARLEN, LENMEMPATH, LENVARNAME, &
                              LENMODELNAME, LINELENGTH, LENMEMTYPE, &
                              LENMEMADDRESS, LENCOMPONENTNAME
-  use KindModule, only: DP, I4B  
+  use KindModule, only: DP, I4B, LGP
   use GenericUtilitiesModule, only: sim_message
   use SimVariablesModule, only: istdout
   use MemoryHelperModule, only: split_mem_address, split_mem_path
@@ -193,5 +193,6 @@ contains
     call get_grid_type_model(model_name, grid_type) 
     ! careful comparison:
     if (expected_type == grid_type) is_match = .true.    
-  end function confirm_grid_type  
+  end function confirm_grid_type
+
 end module mf6bmiUtil

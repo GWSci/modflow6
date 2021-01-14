@@ -1055,7 +1055,7 @@ module GwfDisModule
     ! -- Allocate arrays for GwfDisType
     if(this%nodes < this%nodesuser) then
       call mem_allocate(this%nodeuser, this%nodes, 'NODEUSER', this%memoryPath)
-      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',       &
+      call mem_allocate(this%nodereduced, this%nodesuser, 'NODEREDUCED',         &
                         this%memoryPath)
     else
       call mem_allocate(this%nodeuser, 1, 'NODEUSER', this%memoryPath)

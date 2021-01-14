@@ -227,12 +227,6 @@ def get_model(idx, dir):
     adv = flopy.mf6.ModflowGwtadv(gwt, scheme='UPSTREAM',
                                   filename='{}.adv'.format(gwtname))
 
-    # dispersion
-    # diffc = 0.0
-    # dsp = flopy.mf6.ModflowGwtdsp(gwt, xt3d=True, diffc=diffc,
-    #                              alh=0.1, ath1=0.01, atv=0.05,
-    #                              filename='{}.dsp'.format(gwtname))
-
     # storage
     porosity = 1.0
     sto = flopy.mf6.ModflowGwtmst(gwt, porosity=porosity,
@@ -368,6 +362,7 @@ def eval_results(sim):
     fname = os.path.join(sim.simpath, fname)
     assert os.path.isfile(fname)
     bobj = flopy.utils.CellBudgetFile(fname, precision='double', verbose=False)
+
     # check the flow-ja-face terms
     res = bobj.get_data(text='flow-ja-face')[-1]
     #print(res)
@@ -375,6 +370,13 @@ def eval_results(sim):
     # check the storage terms, which include the total mass in the reach as an aux variable
     res = bobj.get_data(text='storage')[-1]
     #print(res)
+
+    # check the constant term
+    res = bobj.get_data(text='constant')[-1]
+    qs = res['q']
+    qa = np.array([100., 0., 0., 0., 0., 0., 0.])
+    msg = "{} /= {}".format(qs, qa)
+    assert np.allclose(qs, qa), msg
 
     # uncomment when testing
     # assert False

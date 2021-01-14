@@ -25,6 +25,7 @@
 
 \usepackage{titlesec}
 
+
 \usepackage[hidelinks]{hyperref}
 \hypersetup{
     pdftitle={MODFLOW~6 Release Notes},
@@ -146,48 +147,61 @@ This document describes MODFLOW~6 Version \modflowversion.  This distribution is
 
 Version numbers for MODFLOW~6 will follow a major.minor.revision format.  The major number will be increased when there are substantial new changes that may break backward compatibility.  The minor number will be increased when important, but relatively minor new functionality is added.  The revision number will be added when errors are corrected in either the program or input files.
 
+MODFLOW~6 is tested with a large number of example problems, and new capabilities are thoroughly tested as they are integrated into the program.  Additional testing can sometimes reveal errors in the program.  These errors are fixed as soon as possible and made available in a subsequent release.  Every effort is made to maintain backward compatibility of the format for MODFLOW~6 input files; however, this goal is not always possible, especially for newer packages and models.  Changes to the program to add new functionality, correct errors, or alter the format for an input file are summarized in this release notes document.
+
 % -------------------------------------------------
 \section{History}
 This section describes changes introduced into MODFLOW~6 for the current release.  Changes introduced in previous releases are in Appendix~\ref{app:A}. These changes may substantially affect users.
 
 \begin{itemize}
-	\item Version mf6.1.2--Month xx, 20xx
+	\item Version mf6.2.1--Xxx xx, 2020
 
 	\underline{NEW FUNCTIONALITY}
 	\begin{itemize}
-		\item 
-		\item 
-		\item 
+	        \item The Source and Sink Mixing (SSM) Package for the Groundwater Transport Model was modified to include an alternative option for the concentration value assigned to sinks.  A new AUXMIXED option was added to represent evaporation-like sinks where the solute or a portion of the solute may be left behind.  The AUXMIXED option provides an alternative method for determining the groundwater sink concentration.  If the cell concentration is larger than the user-specified sink concentration, then the concentration of the sink will be assigned as the specified concentration.  Alternatively, if the specified concentration is larger than the cell concentration, then water will be withdrawn at the cell concentration.  Thus, the AUXMIXED option is designed to work with the Evapotranspiration and Recharge packages where water may be withdrawn at a concentration that is less than the cell concentration.  
+	        \item xxx  
+	        \item xxx  
+	\end{itemize}
+	
+	\underline{EXAMPLES}
+	\begin{itemize}
+	        \item xxx  
+	        \item xxx  
+	        \item xxx  
 	\end{itemize}
 
 	\textbf{\underline{BUG FIXES AND OTHER CHANGES TO EXISTING FUNCTIONALITY}} \\
 	\underline{BASIC FUNCTIONALITY}
 	\begin{itemize}
-		\item
-		\item
-		\item
+	        \item The way in which the dispersion coefficients are calculated with the simple option (XT3D\_OFF) for the Dispersion Package was modified.  When the velocity within a cell is not aligned with a principal grid direction, the  dispersion coefficients are calculated using a simple arithmetic weighting, rather than harmonic weighting as is done for the simple option for anisotropic flow in the NPF Package.  The arithmetic weighting option eliminates a possible discontinuity when a principal flow-aligned dispersion component is zero.
+	        \item The mass flow between two cells is calculated and optionally written to the GWT budget file.  There was an error in this calculation of mass flow when the TVD scheme was specified in the Advection (ADV) Package.  Consequently, the mass flows written to the budget file were not correct in this situation.  Because these mass flows are also used in the budget calculations for the Constant Concentration (CNC) Package, reported CNC mass flows were also not correct.  This could result in large budget discrepancies in the GWT budget table.  Simulated concentrations were not affected by this error.  A small correction was made to the routine that adds the advective mass flow for the TVD scheme.
+	        \item Several packages had input blocks that could not be specified using the OPEN/CLOSE keyword.  The program was modified so that OPEN/CLOSE is supported for all intended blocks.
+	        \item The Immobile domain Storage and Transfer (IST) Package for the GWT Model is based on a conceptual model in which the immobile domain is always fully saturated, and does not depend on head in a cell.  The program was modified so that none of the terms include saturation except for the mass transfer equation in which the transfer of solute between the mobile and immobile domain is multiplied by saturation.
+	        \item Budget terms for the Immobile domain Storage and Transfer (IST) Package were not being written to the binary budget file for the GWT Model.  The package was modified to write these rate terms to the GWT binary budget file using the settings specified in the GWT Output Control file.
+	        \item Bulk density does not need to be specified for the Immobile domain Storage and Transfer (IST) Package if sorption is not active; however the program was trying to access bulk density even though it is not needed, which resulted in an access violation.  Program was fixed so that bulk density does not need to be specified by the user unless sorption is active for the IST Package.
+	        \item Budget tables printed to the listing file had numeric values that were missing the `E` character if the exponent had three digits (e.g. 1.e-100 or 1.e100).  Writing of the budget table was modified to include the `E` character in this case.  This change should make it easier for programs written in other languages to parse these tables.
 	\end{itemize}
 
 	\underline{STRESS PACKAGES}
 	\begin{itemize}
-		\item 
-		\item 
-		\item 
+	        \item xxx  
+	        \item xxx  
+	        \item xxx  
 	\end{itemize}
 
 	\underline{ADVANCED STRESS PACKAGES}
 	\begin{itemize}
-		\item Fix error in calculated Newton-Raphson MAW-GWF connection terms for the MAW Package. This correction should improve model convergence and may change existing model results. This correction does not affect simulations that use the FLOW\_CORRECTION option introduced in version 6.1.1.
-		\item  The program will now terminate with an error message if the skin radius for a GWF connection in the MAW Package is less than or equal to the well radius. Warning messages are also issued when the well bottom, screen top for a GWF connection, or screen bottom for a GWF connection are reset by the program for one or more MAW Package wells.
-		\item An SFR reach can have zero specified connections.  In this case, an entry is still required in the CONNECTIONDATA block for that reach.  The error check for this required entry was not implemented and so the program would continue with unexpected results.  The program now verifies that an entry is present in CONNECTIONDATA for every reach, even those with zero connections.
-		\item If a GWF 'NONE' connection was specified for SFR then the program would terminate with an error or proceed with unexpected results if GWF or SFR flow terms were written to binary output files.  The program was fixed so that GWF 'NONE' connections for SFR are not written to the binary budget files.
+	        \item The CONSTANT term used to report the rate of mass provided by a constant-concentration condition in the LKT, SFT, MWT, and UZT did not include the contribution to adjacent package features.  For example, if a stream reach was marked as constant-concentration boundary and it had flow into a downstream reach, then that flow was not included in the budget calculations.  Consequently, reported budgets in the listing file would show discrepancies that were larger than what was actually simulated by the model.  The program code was modified to include these mass flows to adjacent features.
+	        \item The ET formulation in UZF was not reducing the residual pET passed to deeper UZF objects when the extinction depth spanned multiple UZF objects (layers).  As a result, to much water was removed when the water table was shallow.  Or, in some cases, water was removed from dry cells that were above the water table but within the extinction depth interval. The ET code within the UZF package was modified to remove only eligible water from the unsaturated and saturated zones.
+            \item The UZF package should exit with an appropriate error message when SURFDEP > cell thickness.  When this condition is not enforced, bad mass balances may result.  
+	        \item xxx  
 	\end{itemize}
 
 	\underline{SOLUTION}
 	\begin{itemize}
-		\item
-		\item
-		\item
+	        \item xxx  
+	        \item xxx  
+	        \item xxx  
 	\end{itemize}
 
 \end{itemize}
@@ -204,6 +218,12 @@ The AUXMULTNAME option can be used to scale input values, such as riverbed condu
 
 \item
 The capability to use Unsaturated Zone Flow (UZF) routing beneath lakes and streams has not been implemented.
+
+\item
+Multi-point cross-section geometries have not been implemented in the Streamflow Routing (SFR) package.
+
+\item
+For the Groundwater Transport (GWT) Model, the decay and sorption processes do not apply to the LKT, SFT, MWT and UZT Packages.  
 
 \end{enumerate}
 
@@ -260,17 +280,6 @@ Details on the numerical methods and the underlying theory for MODFLOW~6 are des
 \end{itemize}
  
 \noindent Description of the MODFLOW~6 input and output is included in this distribution in the ``doc'' folder as mf6io.pdf.
-
-% -------------------------------------------------
-\section{Test Problems}
-The following is a list of test problems distributed with MODFLOW~6.  Characteristics of these tests are contained in Table \ref{table:examples}.
-
-
-% example tex files created by python scripts
-
-\input{example_items.tex}
-
-\input{example_table.tex}
 
 % -------------------------------------------------
 \section{Disclaimer and Notices}

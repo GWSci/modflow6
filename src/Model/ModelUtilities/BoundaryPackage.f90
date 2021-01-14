@@ -6,8 +6,7 @@ module BndModule
                                           LENMODELNAME, LENPACKAGENAME,        &
                                           LENMEMPATH, MAXCHARLEN, LINELENGTH,  &
                                           DNODATA, LENLISTLABEL, LENPAKLOC,    &
-                                          TABLEFT, TABCENTER,                  &
-                                          MEMREADONLY, MEMREADWRITE
+                                          TABLEFT, TABCENTER
   use SimVariablesModule,           only: errmsg
   use SimModule,                    only: count_errors, store_error, ustop,    &
                                           store_error_unit
@@ -1062,8 +1061,11 @@ module BndModule
     if(present(nodelist)) then
       this%nodelist => nodelist
     else
-      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST', this%memoryPath)
-      this%nodelist = 0
+      call mem_allocate(this%nodelist, this%maxbound, 'NODELIST',                &
+                        this%memoryPath)
+      do j = 1, this%maxbound
+        this%nodelist(j) = 0
+      end do
     endif
     !
     ! -- noupdateauxvar (allows an external caller to stop auxvars from being
@@ -1073,7 +1075,7 @@ module BndModule
     !
     ! -- Allocate the bound array
     call mem_allocate(this%bound, this%ncolbnd, this%maxbound, 'BOUND',        &
-                      this%memoryPath, MEMREADWRITE)
+                      this%memoryPath)
     !
     ! -- Allocate hcof and rhs
     call mem_allocate(this%hcof, this%maxbound, 'HCOF', this%memoryPath)
