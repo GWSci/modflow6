@@ -558,7 +558,7 @@ module GwtModule
     end if
     if(this%inmst > 0) then
       call this%mst%mst_fc(this%dis%nodes, this%xold, this%nja, njasln,        &
-                           amatsln, this%idxglo, this%rhs)
+                           amatsln, this%idxglo, this%x, this%rhs)
     endif
     if(this%inadv > 0) then
       call this%adv%adv_fc(this%dis%nodes, amatsln, this%idxglo, this%x,       &
@@ -800,12 +800,8 @@ module GwtModule
     ! -- Output individual flows if requested
     if(ibudfl /= 0) then
       !
-      ! -- NPF output
-!      if(this%innpf > 0) call this%npf%npf_ot(this%neq, this%nja, this%flowja)
-      !
-      ! -- GNC output
-!      if(this%ingnc > 0) &
-!        call this%gnc%gnc_ot()
+      ! -- If there is ever a need to print the GWT flowja terms to the list
+      !    file, this could be done here.
     endif
     !
     ! -- Output control
