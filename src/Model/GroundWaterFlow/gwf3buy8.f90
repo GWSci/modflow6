@@ -57,8 +57,8 @@ module GwfBuyModule
     procedure :: buy_cf
     procedure :: buy_cf_bnd
     procedure :: buy_fc
-    procedure :: buy_bdsav
-    procedure :: buy_flowja
+    procedure :: buy_ot_dv
+    procedure :: buy_cq
     procedure :: buy_da
     procedure, private :: read_dimensions
     procedure, private :: read_packagedata
@@ -970,9 +970,9 @@ module GwfBuyModule
     return
   end subroutine buy_fc
 
-  subroutine buy_bdsav(this, idvfl, icbcfl, icbcun)
+  subroutine buy_ot_dv(this, idvfl)
 ! ******************************************************************************
-! buy_bdsav -- Fill coefficients
+! buy_ot_dv -- Save density array to binary file
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -980,8 +980,6 @@ module GwfBuyModule
     ! -- dummy
     class(GwfBuyType) :: this
     integer(I4B), intent(in) :: idvfl
-    integer(I4B), intent(in) :: icbcfl
-    integer(I4B), intent(in) :: icbcun
     ! -- local
     character(len=1) :: cdatafmp=' ', editdesc=' '
     integer(I4B) :: ibinun
@@ -1016,11 +1014,11 @@ module GwfBuyModule
     !
     ! -- Return
     return
-  end subroutine buy_bdsav
+  end subroutine buy_ot_dv
 
-  subroutine buy_flowja(this, hnew, flowja)
+  subroutine buy_cq(this, hnew, flowja)
 ! ******************************************************************************
-! buy_flowja -- Add buy term to flowja
+! buy_cq -- Add buy term to flowja
 ! ******************************************************************************
 !
 !    SPECIFICATIONS:
@@ -1056,7 +1054,7 @@ module GwfBuyModule
     !
     ! -- Return
     return
-  end subroutine buy_flowja
+  end subroutine buy_cq
  
   subroutine buy_da(this)
 ! ******************************************************************************

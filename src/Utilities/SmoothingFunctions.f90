@@ -634,7 +634,7 @@ end subroutine sChSmooth
     !
     ! -- set smoothing variable a
     if (present(ta)) then
-      a = a
+      a = ta
     else
       a = DEM8
     end if
@@ -683,7 +683,7 @@ end subroutine sChSmooth
     !
     ! -- set smoothing variable a
     if (present(ta)) then
-      a = a
+      a = ta
     else
       a = DEM8
     end if

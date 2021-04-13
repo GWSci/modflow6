@@ -1,6 +1,6 @@
 module FileListModule
 
-  use ConstantsModule,     only: LENBIGLINE, MAXCHARLEN
+  use ConstantsModule,     only: LINELENGTH, MAXCHARLEN
   use ConstantsPHMFModule, only: FCUNKNOWN, FCINPUT, FCDATAIN, FCDATABIN, &
                                  FCDATAOUT, FCOUTPUT, FCDATABOUT
   use FileTypeModule,      only: FileType, ConstructFileType, CastAsFileType
@@ -51,7 +51,7 @@ contains
     implicit none
     ! dummy arguments
     class(FileListType), intent(inout) :: this
-    character(len=*),    intent(in) :: fname
+    character(len=LINELENGTH), intent(in) :: fname
     character(len=*),    intent(in) :: ftype
     integer,             intent(in) :: iu
     integer,             intent(in) :: FCode
@@ -143,7 +143,7 @@ contains
     type(FileType), pointer :: file
     ! local variables
     character(len=500) :: msg
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     type(FileType), pointer :: filePtr => null()
     logical :: killonfailurelocal
     ! format
@@ -187,7 +187,7 @@ contains
     character(len=*),    intent(in) :: ftype
     type(FileType), pointer :: file
     ! local variables
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     type(FileType), pointer :: filePtr => null()
     character(len=500) :: msg
     ! format
@@ -221,7 +221,7 @@ contains
     integer, intent(in) :: indx
     type(FileType), pointer :: fil
     ! local variables
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     fil => null()
     obj => this%files%GetItem(indx)
@@ -237,7 +237,7 @@ contains
     class(FileListType), intent(inout) :: this
     type(FileType), pointer :: fil
     ! local
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     !
     fil => null()
     obj => this%files%GetNextItem()
@@ -255,7 +255,7 @@ contains
     ! local variables
     type(FileType), pointer :: fileptr
     integer :: iu
-    class(*), pointer :: obj
+    class(*), pointer :: obj => null()
     character(len=MAXCHARLEN) :: ermsg, ermsgio
     !
     obj => this%files%GetItem(1)
@@ -293,7 +293,7 @@ contains
     implicit none
     ! dummy
     character(len=*), intent(in) :: fnamein
-    character(len=LENBIGLINE)    :: fnameout
+    character(len=LINELENGTH)    :: fnameout
     ! local
     integer :: i, j, leng
     !logical :: relative

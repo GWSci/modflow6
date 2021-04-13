@@ -110,3 +110,7 @@ CMakeFiles/
 latex/
 html/
 xml/
+
+# Visual Studio Code
+modflow6.code-workspace
+.vscode/settings.json

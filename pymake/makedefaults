@@ -1,6 +1,6 @@
-# makedefaults created on 2020-08-17 10:43:44.878194
-# by pymake (version 1.2.0) for the 'mf6' executable 
-# using the 'gfortran' fortran compiler(s).
+# makedefaults created on 2021-03-05 12:06:51.132948
+# by pymake (version 1.2.1) for the 'mf6' executable 
+# using the 'ifort' fortran compiler(s).
 
 # determine OS
 ifeq ($(OS), Windows_NT)
@@ -58,14 +58,14 @@ OPTLEVEL ?= -O2
 # set the fortran flags
 ifeq ($(detected_OS), Windows)
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
+		FFLAGS ?= -static -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -no-heap-arrays -fpe0 -traceback -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -cpp
 	endif
 else
 	ifeq ($(FC), gfortran)
-		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
+		FFLAGS ?= -fbacktrace -ffpe-summary=overflow -ffpe-trap=overflow,zero,invalid $(OS_macro) -no-heap-arrays -fpe0 -traceback -Wtabs -Wline-truncation -Wunused-label -Wunused-variable -pedantic -std=f2008 -cpp
 	endif
 	ifeq ($(FC), $(filter $(FC), ifort mpiifort))
-		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fno-backtrace -march=native -mtune=native -fwhole-program -fstack-arrays -flto -funroll-loops -floop-nest-optimize -ftree-vectorize
+		FFLAGS ?= -no-heap-arrays -fpe0 -traceback -fpp
 		MODSWITCH = -module $(MODDIR)
 	endif
 endif
